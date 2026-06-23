@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-type Tab = "today" | "progress" | "rewards" | "visits" | "profile";
+type Tab = "today" | "progress" | "rewards" | "club" | "profile";
 type OnboardingStep = "intro" | "form";
 
 const brandRed = "#E30613";
@@ -123,7 +123,7 @@ export default function Home() {
 
   const openSupport = () => {
     alert(
-      "В боевой версии здесь откроется Telegram-бот: сначала быстрые вопросы, затем подключение администратора."
+      "В боевой версии здесь откроется Telegram-бот: быстрые вопросы, запись, баллы, привилегии и подключение администратора."
     );
   };
 
@@ -182,8 +182,8 @@ export default function Home() {
 
         {activeTab === "rewards" && <RewardsScreen />}
 
-        {activeTab === "visits" && (
-          <VisitsScreen
+        {activeTab === "club" && (
+          <ClubScreen
             visitConfirmed={visitConfirmed}
             onConfirmVisit={confirmVisitDemo}
           />
@@ -236,8 +236,8 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
           text="Клиент видит прогресс и открывает статус внутри клуба."
         />
         <FeatureCard
-          title="Визиты"
-          text="После подтверждённого визита баллы начисляются автоматически или через администратора."
+          title="Визиты через 1С"
+          text="После подтверждённого визита баллы начисляются без кода и лишних действий клиента."
         />
       </div>
 
@@ -620,7 +620,7 @@ function RewardsScreen() {
   );
 }
 
-function VisitsScreen({
+function ClubScreen({
   visitConfirmed,
   onConfirmVisit,
 }: {
@@ -630,27 +630,44 @@ function VisitsScreen({
   return (
     <div className="grid gap-4">
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
-        <p className="text-sm text-neutral-400">Визиты</p>
-        <h2 className="mt-1 text-2xl font-semibold">
-          Баллы за посещение салона
-        </h2>
+        <p className="text-sm text-neutral-400">Клуб</p>
+        <h2 className="mt-1 text-2xl font-semibold">Как растут баллы</h2>
         <p className="mt-2 text-sm leading-5 text-neutral-300">
-          В рабочей версии баллы начисляются после подтверждённого визита в 1С
-          или вручную администратором.
+          Клиент не просто получает скидку. Он возвращается в клуб, выполняет
+          маленькие действия, приходит на процедуры и постепенно открывает
+          привилегии.
         </p>
+      </section>
+
+      <section className="grid gap-3">
+        <PointRule
+          title="Ежедневные миссии"
+          text="Короткие wellness-действия между визитами."
+          points="+5 / +10"
+        />
+        <PointRule
+          title="Подтверждённый визит"
+          text="В рабочей версии визит подтверждается через 1С или администратора."
+          points="+100"
+        />
+        <PointRule
+          title="Клубные форматы"
+          text="Закрытые события, спецпредложения и активности можно добавить позже."
+          points="+150"
+        />
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm text-neutral-400">Статус последнего визита</p>
+            <p className="text-sm text-neutral-400">Подтверждение визита</p>
             <h3 className="mt-1 text-xl font-semibold">
-              {visitConfirmed ? "Визит подтверждён" : "Ожидает подтверждения"}
+              {visitConfirmed ? "Визит подтверждён" : "Визит ожидает подтверждения"}
             </h3>
             <p className="mt-2 text-sm leading-5 text-neutral-400">
               {visitConfirmed
                 ? "Начислено +100 баллов. В полной версии клиент получит уведомление в Telegram."
-                : "После визита администратор или 1С подтверждает посещение, и баллы начисляются автоматически."}
+                : "Клиенту не нужно вводить код. После визита данные могут прийти из 1С, и баллы начислятся автоматически."}
             </p>
           </div>
 
@@ -672,32 +689,56 @@ function VisitsScreen({
           }
           style={!visitConfirmed ? { backgroundColor: brandRed } : undefined}
         >
-          {visitConfirmed
-            ? "Визит уже подтверждён"
-            : "Смоделировать подтверждение визита"}
+          {visitConfirmed ? "Баллы начислены" : "Демо: подтвердить визит"}
         </button>
 
         <p className="mt-3 text-xs leading-5 text-neutral-500">
-          Эта кнопка нужна только для демонстрации управляющим. В рабочей версии
-          клиент не будет ничего нажимать.
+          Кнопка нужна только для презентации. В рабочей версии подтверждение
+          приходит из 1С или из админки.
         </p>
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
-        <h3 className="text-xl font-semibold">Как будет в полной версии</h3>
+        <h3 className="text-xl font-semibold">Почему это удобно клиенту</h3>
 
         <div className="mt-4 grid gap-3 text-sm text-neutral-300">
           <div className="rounded-2xl bg-black/25 p-4">
-            1. Клиент приходит в “Личное тело”.
+            Не нужно вводить код после процедуры.
           </div>
           <div className="rounded-2xl bg-black/25 p-4">
-            2. Визит фиксируется в 1С или подтверждается администратором.
+            Баллы появляются после подтверждения визита в системе.
           </div>
           <div className="rounded-2xl bg-black/25 p-4">
-            3. Mini App начисляет баллы и обновляет уровень клиента.
+            Прогресс ведёт клиента к новым привилегиям и повторным визитам.
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+function PointRule({
+  title,
+  text,
+  points,
+}: {
+  title: string;
+  text: string;
+  points: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 rounded-3xl border border-white/10 bg-white/[0.06] p-4">
+      <div>
+        <h3 className="text-lg font-semibold">{title}</h3>
+        <p className="mt-1 text-sm leading-5 text-neutral-400">{text}</p>
+      </div>
+
+      <div
+        className="shrink-0 rounded-2xl px-3 py-2 text-sm font-semibold text-white"
+        style={{ backgroundColor: brandRed }}
+      >
+        {points}
+      </div>
     </div>
   );
 }
@@ -773,7 +814,7 @@ function BottomNavigation({
     { id: "today", label: "Сегодня" },
     { id: "progress", label: "Прогресс" },
     { id: "rewards", label: "Привилегии" },
-    { id: "visits", label: "Визиты" },
+    { id: "club", label: "Клуб" },
     { id: "profile", label: "Профиль" },
   ];
 
