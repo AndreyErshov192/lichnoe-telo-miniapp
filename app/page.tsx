@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-type Tab = "today" | "progress" | "rewards" | "bonus" | "profile";
+type Tab = "today" | "progress" | "rewards" | "visits" | "profile";
 type OnboardingStep = "intro" | "form";
 
 const brandRed = "#E30613";
@@ -76,15 +76,17 @@ export default function Home() {
 
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [completedMissions, setCompletedMissions] = useState<number[]>([]);
+  const [visitConfirmed, setVisitConfirmed] = useState(false);
 
   const basePoints = 80;
+  const visitPoints = visitConfirmed ? 100 : 0;
 
   const earnedPoints = completedMissions.reduce((sum, missionId) => {
     const mission = missions.find((item) => item.id === missionId);
     return sum + (mission?.points ?? 0);
   }, 0);
 
-  const totalPoints = basePoints + earnedPoints;
+  const totalPoints = basePoints + earnedPoints + visitPoints;
 
   const currentLevel = useMemo(() => {
     const availableLevels = levels.filter((level) => totalPoints >= level.min);
@@ -106,6 +108,11 @@ export default function Home() {
   const completeMission = (missionId: number) => {
     if (completedMissions.includes(missionId)) return;
     setCompletedMissions([...completedMissions, missionId]);
+  };
+
+  const confirmVisitDemo = () => {
+    if (visitConfirmed) return;
+    setVisitConfirmed(true);
   };
 
   const completeOnboarding = () => {
@@ -169,12 +176,18 @@ export default function Home() {
             nextLevel={nextLevel?.name}
             progressPercent={progressPercent}
             completedMissionsCount={completedMissions.length}
+            visitConfirmed={visitConfirmed}
           />
         )}
 
         {activeTab === "rewards" && <RewardsScreen />}
 
-        {activeTab === "bonus" && <BonusScreen />}
+        {activeTab === "visits" && (
+          <VisitsScreen
+            visitConfirmed={visitConfirmed}
+            onConfirmVisit={confirmVisitDemo}
+          />
+        )}
 
         {activeTab === "profile" && (
           <ProfileScreen
@@ -208,8 +221,8 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
         </h1>
 
         <p className="mt-4 text-lg leading-7 text-neutral-300">
-          Клуб восстановления, где ежедневные ритуалы, визиты и сториз
-          превращаются в баллы, уровни и клубные привилегии.
+          Клуб восстановления, где ежедневные ритуалы и визиты превращаются в
+          баллы, уровни и клубные привилегии.
         </p>
       </div>
 
@@ -223,8 +236,8 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
           text="Клиент видит прогресс и открывает статус внутри клуба."
         />
         <FeatureCard
-          title="Бонусы"
-          text="Визит и сториз становятся подтверждёнными действиями, полезными салону."
+          title="Визиты"
+          text="После подтверждённого визита баллы начисляются автоматически или через администратора."
         />
       </div>
 
@@ -508,12 +521,14 @@ function ProgressScreen({
   nextLevel,
   progressPercent,
   completedMissionsCount,
+  visitConfirmed,
 }: {
   totalPoints: number;
   currentLevel: string;
   nextLevel?: string;
   progressPercent: number;
   completedMissionsCount: number;
+  visitConfirmed: boolean;
 }) {
   return (
     <div>
@@ -539,10 +554,10 @@ function ProgressScreen({
       </section>
 
       <section className="mt-5 grid grid-cols-2 gap-3">
-        <StatCard label="Стрик" value="3 дня" />
+        <StatCard label="Ритм" value="3 дня подряд" />
         <StatCard label="Миссии" value={`${completedMissionsCount}/3`} />
-        <StatCard label="Сториз" value="0" />
-        <StatCard label="Визиты" value="0" />
+        <StatCard label="Визиты" value={visitConfirmed ? "1" : "0"} />
+        <StatCard label="Привилегии" value="1 доступна" />
       </section>
     </div>
   );
@@ -605,50 +620,83 @@ function RewardsScreen() {
   );
 }
 
-function BonusScreen() {
+function VisitsScreen({
+  visitConfirmed,
+  onConfirmVisit,
+}: {
+  visitConfirmed: boolean;
+  onConfirmVisit: () => void;
+}) {
   return (
     <div className="grid gap-4">
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
-        <p className="text-sm text-neutral-400">Бонусы</p>
-        <h2 className="mt-1 text-2xl font-semibold">Подтверждённые действия</h2>
+        <p className="text-sm text-neutral-400">Визиты</p>
+        <h2 className="mt-1 text-2xl font-semibold">
+          Баллы за посещение салона
+        </h2>
         <p className="mt-2 text-sm leading-5 text-neutral-300">
-          Здесь клиент получает баллы за то, что полезно бизнесу: реальный визит
-          и сториз с отметкой.
+          В рабочей версии баллы начисляются после подтверждённого визита в 1С
+          или вручную администратором.
         </p>
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
-        <h3 className="text-xl font-semibold">Код визита</h3>
-        <p className="mt-2 text-sm leading-5 text-neutral-400">
-          После визита клиент получает код у администратора и вводит его здесь.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-neutral-400">Статус последнего визита</p>
+            <h3 className="mt-1 text-xl font-semibold">
+              {visitConfirmed ? "Визит подтверждён" : "Ожидает подтверждения"}
+            </h3>
+            <p className="mt-2 text-sm leading-5 text-neutral-400">
+              {visitConfirmed
+                ? "Начислено +100 баллов. В полной версии клиент получит уведомление в Telegram."
+                : "После визита администратор или 1С подтверждает посещение, и баллы начисляются автоматически."}
+            </p>
+          </div>
 
-        <div className="mt-4 rounded-2xl bg-black/30 px-4 py-3 text-neutral-500">
-          Например: LT-1206
+          <div
+            className="rounded-2xl px-4 py-3 text-center text-sm font-semibold text-white"
+            style={{ backgroundColor: visitConfirmed ? brandRed : "#333333" }}
+          >
+            +100
+          </div>
         </div>
 
         <button
-          className="mt-4 w-full rounded-2xl px-5 py-4 font-semibold text-white"
-          style={{ backgroundColor: brandRed }}
+          onClick={onConfirmVisit}
+          disabled={visitConfirmed}
+          className={
+            visitConfirmed
+              ? "mt-5 w-full rounded-2xl bg-white/10 px-5 py-4 font-semibold text-neutral-500"
+              : "mt-5 w-full rounded-2xl px-5 py-4 font-semibold text-white"
+          }
+          style={!visitConfirmed ? { backgroundColor: brandRed } : undefined}
         >
-          Подтвердить визит
+          {visitConfirmed
+            ? "Визит уже подтверждён"
+            : "Смоделировать подтверждение визита"}
         </button>
+
+        <p className="mt-3 text-xs leading-5 text-neutral-500">
+          Эта кнопка нужна только для демонстрации управляющим. В рабочей версии
+          клиент не будет ничего нажимать.
+        </p>
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
-        <h3 className="text-xl font-semibold">Сториз-бонус</h3>
-        <p className="mt-2 text-sm leading-5 text-neutral-400">
-          Клиент отмечает салон в сториз, загружает скрин и получает баллы после
-          ручной проверки.
-        </p>
+        <h3 className="text-xl font-semibold">Как будет в полной версии</h3>
 
-        <button className="mt-4 w-full rounded-2xl bg-white px-5 py-4 font-semibold text-black">
-          Загрузить скрин
-        </button>
-
-        <p className="mt-3 text-xs text-neutral-500">
-          Автоматическую проверку сториз в первой версии не делаем.
-        </p>
+        <div className="mt-4 grid gap-3 text-sm text-neutral-300">
+          <div className="rounded-2xl bg-black/25 p-4">
+            1. Клиент приходит в “Личное тело”.
+          </div>
+          <div className="rounded-2xl bg-black/25 p-4">
+            2. Визит фиксируется в 1С или подтверждается администратором.
+          </div>
+          <div className="rounded-2xl bg-black/25 p-4">
+            3. Mini App начисляет баллы и обновляет уровень клиента.
+          </div>
+        </div>
       </section>
     </div>
   );
@@ -725,7 +773,7 @@ function BottomNavigation({
     { id: "today", label: "Сегодня" },
     { id: "progress", label: "Прогресс" },
     { id: "rewards", label: "Привилегии" },
-    { id: "bonus", label: "Бонусы" },
+    { id: "visits", label: "Визиты" },
     { id: "profile", label: "Профиль" },
   ];
 
