@@ -3,24 +3,27 @@
 import { useMemo, useState } from "react";
 
 type Tab = "today" | "progress" | "rewards" | "bonus" | "profile";
+type OnboardingStep = "intro" | "form";
+
+const brandRed = "#E30613";
 
 const missions = [
   {
     id: 1,
     title: "2 минуты тишины",
-    description: "Отложите телефон и просто побудьте в тишине.",
+    description: "Отложите телефон и побудьте в тишине без задач и уведомлений.",
     points: 10,
   },
   {
     id: 2,
     title: "Расслабить плечи",
-    description: "Сделайте 5 медленных кругов плечами.",
+    description: "Сделайте 5 медленных кругов плечами и отпустите напряжение.",
     points: 10,
   },
   {
     id: 3,
     title: "Стакан воды",
-    description: "Выпейте стакан воды до кофе или сладкого.",
+    description: "Выпейте стакан воды до кофе, сладкого или нового дела.",
     points: 5,
   },
 ];
@@ -54,21 +57,23 @@ const rewards = [
   {
     level: "Личный круг",
     title: "Персональный бонус месяца",
-    description: "Клубный апгрейд или доступ к закрытому формату.",
+    description: "Клубный апгрейд или доступ к закрытому wellness-формату.",
     unlocked: false,
   },
 ];
 
-const card =
-  "rounded-[26px] border border-white/[0.07] bg-white/[0.045] p-5 shadow-[0_8px_32px_rgba(0,0,0,0.24)]";
-const cardHighlight =
-  "rounded-[26px] border border-white/[0.12] bg-gradient-to-b from-white/[0.09] to-white/[0.04] p-5";
-const btnPrimary =
-  "rounded-2xl bg-[#f4f1ea] px-5 py-3.5 text-[15px] font-semibold text-[#121212] transition active:scale-[0.98] disabled:opacity-60";
-const btnGhost =
-  "rounded-2xl border border-white/[0.1] bg-white/[0.06] px-5 py-3.5 text-[15px] font-medium text-neutral-300";
+const goals = ["Восстановление", "Расслабление", "Тонус", "Снять напряжение"];
+const reminderTimes = ["Утро", "День", "Вечер"];
+const interests = ["Процедуры", "Уход", "Ритуалы", "Закрытые форматы"];
 
 export default function Home() {
+  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("intro");
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+
+  const [goal, setGoal] = useState("");
+  const [reminderTime, setReminderTime] = useState("");
+  const [interest, setInterest] = useState("");
+
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [completedMissions, setCompletedMissions] = useState<number[]>([]);
 
@@ -103,48 +108,86 @@ export default function Home() {
     setCompletedMissions([...completedMissions, missionId]);
   };
 
+  const completeOnboarding = () => {
+    if (!goal || !reminderTime || !interest) return;
+    setIsOnboardingComplete(true);
+    setActiveTab("today");
+  };
+
   const openSupport = () => {
     alert(
-      "В боевой версии здесь откроется Telegram-бот и начнётся первичный диалог с поддержкой."
+      "В боевой версии здесь откроется Telegram-бот: сначала быстрые вопросы, затем подключение администратора."
     );
   };
 
-  return (
-    <main className="min-h-screen bg-[#0b0b0d] text-white">
-      <div className="pointer-events-none fixed inset-x-0 top-0 h-48 bg-[radial-gradient(ellipse_at_top,rgba(244,241,234,0.07),transparent_70%)]" />
+  if (!isOnboardingComplete) {
+    return (
+      <main className="min-h-screen bg-[#0E0E0E] text-white">
+        <section className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-7">
+          {onboardingStep === "intro" && (
+            <IntroScreen onStart={() => setOnboardingStep("form")} />
+          )}
 
-      <section className="relative mx-auto flex min-h-screen max-w-md flex-col px-4 pb-28 pt-6 sm:px-5">
-        <DemoBadge />
+          {onboardingStep === "form" && (
+            <OnboardingForm
+              goal={goal}
+              reminderTime={reminderTime}
+              interest={interest}
+              onGoalChange={setGoal}
+              onReminderTimeChange={setReminderTime}
+              onInterestChange={setInterest}
+              onBack={() => setOnboardingStep("intro")}
+              onComplete={completeOnboarding}
+            />
+          )}
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#0E0E0E] text-white">
+      <section className="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-24 pt-7">
         <Header totalPoints={totalPoints} currentLevel={currentLevel.name} />
 
-        <div className="flex-1">
-          {activeTab === "today" && (
-            <TodayScreen
-              totalPoints={totalPoints}
-              currentLevel={currentLevel.name}
-              nextLevel={nextLevel?.name}
-              progressPercent={progressPercent}
-              completedMissions={completedMissions}
-              onCompleteMission={completeMission}
-            />
-          )}
+        {activeTab === "today" && (
+          <TodayScreen
+            totalPoints={totalPoints}
+            currentLevel={currentLevel.name}
+            nextLevel={nextLevel?.name}
+            progressPercent={progressPercent}
+            completedMissions={completedMissions}
+            onCompleteMission={completeMission}
+            goal={goal}
+          />
+        )}
 
-          {activeTab === "progress" && (
-            <ProgressScreen
-              totalPoints={totalPoints}
-              currentLevel={currentLevel.name}
-              nextLevel={nextLevel?.name}
-              progressPercent={progressPercent}
-              completedMissionsCount={completedMissions.length}
-            />
-          )}
+        {activeTab === "progress" && (
+          <ProgressScreen
+            totalPoints={totalPoints}
+            currentLevel={currentLevel.name}
+            nextLevel={nextLevel?.name}
+            progressPercent={progressPercent}
+            completedMissionsCount={completedMissions.length}
+          />
+        )}
 
-          {activeTab === "rewards" && <RewardsScreen />}
+        {activeTab === "rewards" && <RewardsScreen />}
 
-          {activeTab === "bonus" && <BonusScreen />}
+        {activeTab === "bonus" && <BonusScreen />}
 
-          {activeTab === "profile" && <ProfileScreen onSupport={openSupport} />}
-        </div>
+        {activeTab === "profile" && (
+          <ProfileScreen
+            goal={goal}
+            reminderTime={reminderTime}
+            interest={interest}
+            onSupport={openSupport}
+            onResetOnboarding={() => {
+              setIsOnboardingComplete(false);
+              setOnboardingStep("form");
+            }}
+          />
+        )}
       </section>
 
       <BottomNavigation activeTab={activeTab} onChange={setActiveTab} />
@@ -152,13 +195,183 @@ export default function Home() {
   );
 }
 
-function DemoBadge() {
+function IntroScreen({ onStart }: { onStart: () => void }) {
   return (
-    <div className="mb-4 flex items-center justify-center">
-      <span className="rounded-full border border-amber-400/20 bg-amber-400/[0.08] px-3 py-1 text-[11px] font-medium tracking-wide text-amber-200/90">
-        Демо-прототип · данные не сохраняются
-      </span>
+    <div className="flex min-h-screen flex-col">
+      <div className="mb-10">
+        <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-neutral-300">
+          Telegram Mini App · демо-прототип
+        </div>
+
+        <h1 className="mt-6 text-5xl font-semibold tracking-tight">
+          Личное тело
+        </h1>
+
+        <p className="mt-4 text-lg leading-7 text-neutral-300">
+          Клуб восстановления, где ежедневные ритуалы, визиты и сториз
+          превращаются в баллы, уровни и клубные привилегии.
+        </p>
+      </div>
+
+      <div className="grid gap-3">
+        <FeatureCard
+          title="Миссии"
+          text="Короткие действия, которые удерживают контакт с клиентом между визитами."
+        />
+        <FeatureCard
+          title="Баллы и уровни"
+          text="Клиент видит прогресс и открывает статус внутри клуба."
+        />
+        <FeatureCard
+          title="Бонусы"
+          text="Визит и сториз становятся подтверждёнными действиями, полезными салону."
+        />
+      </div>
+
+      <div className="mt-auto pb-4 pt-10">
+        <button
+          onClick={onStart}
+          className="w-full rounded-3xl px-5 py-5 text-base font-semibold text-white"
+          style={{ backgroundColor: brandRed }}
+        >
+          Вступить в клуб
+        </button>
+
+        <p className="mt-4 text-center text-xs leading-5 text-neutral-500">
+          Это демонстрационная версия. Данные пока не сохраняются в базе.
+        </p>
+      </div>
     </div>
+  );
+}
+
+function FeatureCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+      <h3 className="text-lg font-semibold">{title}</h3>
+      <p className="mt-2 text-sm leading-5 text-neutral-400">{text}</p>
+    </div>
+  );
+}
+
+function OnboardingForm({
+  goal,
+  reminderTime,
+  interest,
+  onGoalChange,
+  onReminderTimeChange,
+  onInterestChange,
+  onBack,
+  onComplete,
+}: {
+  goal: string;
+  reminderTime: string;
+  interest: string;
+  onGoalChange: (value: string) => void;
+  onReminderTimeChange: (value: string) => void;
+  onInterestChange: (value: string) => void;
+  onBack: () => void;
+  onComplete: () => void;
+}) {
+  const isReady = Boolean(goal && reminderTime && interest);
+
+  return (
+    <div className="flex min-h-screen flex-col">
+      <button onClick={onBack} className="mb-6 w-fit text-sm text-neutral-400">
+        ← Назад
+      </button>
+
+      <div>
+        <p className="text-sm text-neutral-400">Первый вход</p>
+        <h1 className="mt-2 text-4xl font-semibold tracking-tight">
+          Настроим клуб под вас
+        </h1>
+        <p className="mt-3 text-base leading-6 text-neutral-300">
+          Три быстрых вопроса, чтобы в демо показать персональный путь клиента.
+        </p>
+      </div>
+
+      <div className="mt-8 grid gap-7">
+        <ChoiceBlock
+          title="Какая цель ближе?"
+          options={goals}
+          value={goal}
+          onChange={onGoalChange}
+        />
+
+        <ChoiceBlock
+          title="Когда удобнее получать напоминания?"
+          options={reminderTimes}
+          value={reminderTime}
+          onChange={onReminderTimeChange}
+        />
+
+        <ChoiceBlock
+          title="Что интереснее всего?"
+          options={interests}
+          value={interest}
+          onChange={onInterestChange}
+        />
+      </div>
+
+      <div className="mt-auto pb-4 pt-10">
+        <button
+          onClick={onComplete}
+          disabled={!isReady}
+          className={
+            isReady
+              ? "w-full rounded-3xl px-5 py-5 text-base font-semibold text-white"
+              : "w-full rounded-3xl bg-white/10 px-5 py-5 text-base font-semibold text-neutral-500"
+          }
+          style={isReady ? { backgroundColor: brandRed } : undefined}
+        >
+          Перейти в клуб
+        </button>
+
+        <p className="mt-4 text-center text-xs leading-5 text-neutral-500">
+          В рабочей версии ответы сохраняются в профиле клиента.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ChoiceBlock({
+  title,
+  options,
+  value,
+  onChange,
+}: {
+  title: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <section>
+      <h2 className="text-lg font-semibold">{title}</h2>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {options.map((option) => {
+          const isSelected = value === option;
+
+          return (
+            <button
+              key={option}
+              onClick={() => onChange(option)}
+              className={
+                isSelected
+                  ? "rounded-2xl px-4 py-4 text-left text-sm font-semibold text-white"
+                  : "rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4 text-left text-sm text-neutral-300"
+              }
+              style={isSelected ? { backgroundColor: brandRed } : undefined}
+            >
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -170,48 +383,35 @@ function Header({
   currentLevel: string;
 }) {
   return (
-    <header className="mb-5">
-      <p className="text-[13px] font-medium uppercase tracking-[0.18em] text-neutral-500">
-        Клуб восстановления
-      </p>
-      <h1 className="mt-1.5 text-[34px] font-semibold leading-tight tracking-tight text-[#f4f1ea]">
-        Личное тело
-      </h1>
-      <p className="mt-2 max-w-[280px] text-[14px] leading-relaxed text-neutral-400">
-        Мягкий ритм заботы о теле — внутри Telegram
-      </p>
-
-      <div className={`${cardHighlight} mt-5 flex items-center justify-between gap-4`}>
+    <header className="mb-6">
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-[12px] uppercase tracking-wide text-neutral-500">
-            Ваш статус
-          </p>
-          <p className="mt-1 text-[22px] font-semibold text-[#f4f1ea]">
-            {currentLevel}
-          </p>
+          <p className="text-sm text-neutral-400">Клуб восстановления</p>
+          <h1 className="mt-1 text-4xl font-semibold tracking-tight">
+            Личное тело
+          </h1>
         </div>
 
-        <div className="rounded-[18px] bg-[#f4f1ea] px-4 py-2.5 text-center">
-          <p className="text-[10px] font-medium uppercase tracking-wide text-neutral-500">
-            Баллы
-          </p>
-          <p className="text-[22px] font-semibold leading-none text-[#121212]">
-            {totalPoints}
-          </p>
+        <div
+          className="rounded-full px-3 py-2 text-xs font-semibold text-white"
+          style={{ backgroundColor: brandRed }}
+        >
+          демо
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center justify-between rounded-3xl border border-white/10 bg-white/[0.06] p-4">
+        <div>
+          <p className="text-sm text-neutral-400">Ваш статус</p>
+          <p className="text-xl font-semibold">{currentLevel}</p>
+        </div>
+
+        <div className="rounded-2xl bg-white px-4 py-2 text-black">
+          <p className="text-xs text-neutral-500">Баллы</p>
+          <p className="text-lg font-semibold">{totalPoints}</p>
         </div>
       </div>
     </header>
-  );
-}
-
-function ProgressBar({ percent }: { percent: number }) {
-  return (
-    <div className="h-2 overflow-hidden rounded-full bg-white/[0.08]">
-      <div
-        className="h-full rounded-full bg-gradient-to-r from-[#d4cfc4] to-[#f4f1ea] transition-all duration-500"
-        style={{ width: `${percent}%` }}
-      />
-    </div>
   );
 }
 
@@ -222,6 +422,7 @@ function TodayScreen({
   progressPercent,
   completedMissions,
   onCompleteMission,
+  goal,
 }: {
   totalPoints: number;
   currentLevel: string;
@@ -229,92 +430,74 @@ function TodayScreen({
   progressPercent: number;
   completedMissions: number[];
   onCompleteMission: (missionId: number) => void;
+  goal: string;
 }) {
-  const doneCount = completedMissions.length;
-
   return (
-    <div className="space-y-4">
-      <section className={cardHighlight}>
-        <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-500">
-          Сегодня
-        </p>
-        <h2 className="mt-1.5 text-[26px] font-semibold leading-tight text-[#f4f1ea]">
-          {doneCount === missions.length
-            ? "День завершён"
-            : `${missions.length - doneCount} ритуала ждут вас`}
-        </h2>
-        <p className="mt-2.5 text-[14px] leading-relaxed text-neutral-400">
-          Короткие практики восстановления — без спешки и без давления.
-          Отметьте выполненное, чтобы двигаться к следующему уровню клуба.
+    <div>
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <p className="text-sm text-neutral-400">Сегодня</p>
+        <h2 className="mt-1 text-2xl font-semibold">3 миссии готовы</h2>
+        <p className="mt-2 text-sm leading-5 text-neutral-300">
+          Цель клиента: {goal || "восстановление"}. Миссии дают лёгкое касание
+          между визитами и вовлекают в клуб.
         </p>
 
-        <div className="mt-5 space-y-2.5">
-          <div className="flex justify-between text-[13px] text-neutral-500">
+        <div className="mt-5">
+          <div className="flex justify-between text-sm text-neutral-400">
             <span>{currentLevel}</span>
-            <span>
-              {nextLevel ? `→ ${nextLevel}` : "высший уровень клуба"}
-            </span>
+            <span>{nextLevel ? `до ${nextLevel}` : "максимальный уровень"}</span>
           </div>
-          <ProgressBar percent={progressPercent} />
-          <p className="text-[12px] text-neutral-500">
-            {totalPoints} баллов · {progressPercent}% до следующего статуса
+
+          <div className="mt-2 h-3 rounded-full bg-white/10">
+            <div
+              className="h-3 rounded-full"
+              style={{ width: `${progressPercent}%`, backgroundColor: brandRed }}
+            />
+          </div>
+
+          <p className="mt-2 text-xs text-neutral-500">
+            {totalPoints} баллов · прогресс {progressPercent}%
           </p>
         </div>
       </section>
 
-      <div>
-        <p className="mb-3 px-1 text-[12px] font-medium uppercase tracking-wide text-neutral-500">
-          Ритуалы дня
-        </p>
-        <div className="space-y-3">
-          {missions.map((mission, index) => {
-            const isCompleted = completedMissions.includes(mission.id);
+      <section className="mt-5 grid gap-3">
+        {missions.map((mission) => {
+          const isCompleted = completedMissions.includes(mission.id);
 
-            return (
-              <div
-                key={mission.id}
-                className={`${card} ${isCompleted ? "border-emerald-400/15 bg-emerald-400/[0.04]" : ""}`}
-              >
-                <div className="flex items-start gap-3">
-                  <span
-                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
-                      isCompleted
-                        ? "bg-emerald-400/15 text-emerald-300"
-                        : "bg-white/[0.08] text-neutral-400"
-                    }`}
-                  >
-                    {isCompleted ? "✓" : index + 1}
-                  </span>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[17px] font-semibold leading-snug text-[#f4f1ea]">
-                      {mission.title}
-                    </p>
-                    <p className="mt-1.5 text-[14px] leading-relaxed text-neutral-400">
-                      {mission.description}
-                    </p>
-                    <p className="mt-3 text-[13px] font-medium text-neutral-300">
-                      +{mission.points} баллов клуба
-                    </p>
-                  </div>
+          return (
+            <div
+              key={mission.id}
+              className="rounded-3xl border border-white/10 bg-white/[0.06] p-4"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-lg font-semibold">{mission.title}</p>
+                  <p className="mt-1 text-sm leading-5 text-neutral-400">
+                    {mission.description}
+                  </p>
+                  <p className="mt-3 text-sm text-neutral-300">
+                    +{mission.points} баллов
+                  </p>
                 </div>
 
                 <button
                   onClick={() => onCompleteMission(mission.id)}
                   disabled={isCompleted}
-                  className={`mt-4 w-full ${isCompleted ? btnGhost : btnPrimary}`}
+                  className={
+                    isCompleted
+                      ? "rounded-2xl bg-white/10 px-4 py-2 text-sm text-neutral-400"
+                      : "rounded-2xl px-4 py-2 text-sm font-semibold text-white"
+                  }
+                  style={!isCompleted ? { backgroundColor: brandRed } : undefined}
                 >
-                  {isCompleted ? "Ритуал принят" : "Отметить выполненным"}
+                  {isCompleted ? "Готово" : "Сделано"}
                 </button>
               </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <p className="px-1 text-center text-[11px] leading-relaxed text-neutral-600">
-        Демо: нажатия сохраняются только до перезагрузки страницы
-      </p>
+            </div>
+          );
+        })}
+      </section>
     </div>
   );
 }
@@ -332,266 +515,201 @@ function ProgressScreen({
   progressPercent: number;
   completedMissionsCount: number;
 }) {
-  const stats = [
-    { label: "Стрик", value: "3 дня", hint: "Демо-значение" },
-    {
-      label: "Ритуалы",
-      value: `${completedMissionsCount}/${missions.length}`,
-      hint: "Сегодня",
-    },
-    { label: "Сториз", value: "0", hint: "За месяц" },
-    { label: "Визиты", value: "0", hint: "В клуб" },
-  ];
-
   return (
-    <div className="space-y-4">
-      <section className={cardHighlight}>
-        <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-500">
-          Прогресс
-        </p>
-        <h2 className="mt-1.5 text-[36px] font-semibold leading-none text-[#f4f1ea]">
-          {totalPoints}
-          <span className="ml-2 text-[16px] font-normal text-neutral-500">
-            баллов
-          </span>
-        </h2>
-        <p className="mt-3 text-[14px] leading-relaxed text-neutral-400">
-          Вы — участник уровня «{currentLevel}». Каждый ритуал и визит
-          приближают к клубным привилегиям.
+    <div>
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <p className="text-sm text-neutral-400">Ваш прогресс</p>
+        <h2 className="mt-1 text-3xl font-semibold">{totalPoints} баллов</h2>
+        <p className="mt-2 text-sm text-neutral-300">
+          Текущий уровень: {currentLevel}
         </p>
 
-        <div className="mt-5 space-y-2.5">
-          <ProgressBar percent={progressPercent} />
-          <p className="text-[13px] text-neutral-500">
-            {nextLevel
-              ? `До «${nextLevel}» — ${progressPercent}% пути пройдено`
-              : "Вы достигли высшего уровня в этом демо"}
-          </p>
+        <div className="mt-5 h-3 rounded-full bg-white/10">
+          <div
+            className="h-3 rounded-full"
+            style={{ width: `${progressPercent}%`, backgroundColor: brandRed }}
+          />
         </div>
+
+        <p className="mt-2 text-sm text-neutral-400">
+          {nextLevel
+            ? `До уровня “${nextLevel}” осталось немного.`
+            : "Вы открыли максимальный уровень демо-версии."}
+        </p>
       </section>
 
-      <div>
-        <p className="mb-3 px-1 text-[12px] font-medium uppercase tracking-wide text-neutral-500">
-          Ваша активность
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          {stats.map((stat) => (
-            <div key={stat.label} className={card}>
-              <p className="text-[12px] text-neutral-500">{stat.label}</p>
-              <p className="mt-2 text-[26px] font-semibold text-[#f4f1ea]">
-                {stat.value}
-              </p>
-              <p className="mt-1 text-[11px] text-neutral-600">{stat.hint}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      <section className="mt-5 grid grid-cols-2 gap-3">
+        <StatCard label="Стрик" value="3 дня" />
+        <StatCard label="Миссии" value={`${completedMissionsCount}/3`} />
+        <StatCard label="Сториз" value="0" />
+        <StatCard label="Визиты" value="0" />
+      </section>
+    </div>
+  );
+}
 
-      <p className="px-1 text-center text-[11px] leading-relaxed text-neutral-600">
-        Демо: стрик, визиты и сториз — заглушки для визуального прототипа
-      </p>
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-4">
+      <p className="text-sm text-neutral-400">{label}</p>
+      <p className="mt-2 text-2xl font-semibold">{value}</p>
     </div>
   );
 }
 
 function RewardsScreen() {
   return (
-    <div className="space-y-4">
-      <section className={cardHighlight}>
-        <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-500">
-          Привилегии
-        </p>
-        <h2 className="mt-1.5 text-[26px] font-semibold leading-tight text-[#f4f1ea]">
-          Уровни клуба
-        </h2>
-        <p className="mt-2.5 text-[14px] leading-relaxed text-neutral-400">
-          Баллы открывают доступ к заботе о вас — приоритетные окна,
-          закрытые форматы и персональные бонусы. Без бесконечных скидок.
+    <div>
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <p className="text-sm text-neutral-400">Привилегии</p>
+        <h2 className="mt-1 text-2xl font-semibold">Не скидки, а статус</h2>
+        <p className="mt-2 text-sm leading-5 text-neutral-300">
+          Баллы открывают сервисные преимущества: лист ожидания, закрытые слоты,
+          апгрейды и клубные форматы.
         </p>
       </section>
 
-      <div className="space-y-3">
+      <section className="mt-5 grid gap-3">
         {rewards.map((reward) => (
           <div
             key={reward.title}
             className={
               reward.unlocked
-                ? "rounded-[26px] border border-[#f4f1ea]/20 bg-[#f4f1ea] p-5 text-[#121212] shadow-[0_8px_32px_rgba(244,241,234,0.12)]"
-                : card
+                ? "rounded-3xl bg-white p-4 text-black"
+                : "rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-white"
             }
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <p
-                  className={
-                    reward.unlocked
-                      ? "text-[11px] font-medium uppercase tracking-wide text-neutral-500"
-                      : "text-[11px] font-medium uppercase tracking-wide text-neutral-500"
-                  }
-                >
-                  {reward.level}
-                </p>
-                <h3 className="mt-1 text-[17px] font-semibold leading-snug">
-                  {reward.title}
-                </h3>
-                <p
-                  className={
-                    reward.unlocked
-                      ? "mt-2 text-[14px] leading-relaxed text-neutral-600"
-                      : "mt-2 text-[14px] leading-relaxed text-neutral-400"
-                  }
-                >
-                  {reward.description}
-                </p>
-              </div>
-              <span
-                className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                  reward.unlocked
-                    ? "bg-[#121212]/10 text-neutral-600"
-                    : "bg-white/[0.06] text-neutral-500"
-                }`}
-              >
-                {reward.unlocked ? "Открыто" : "Скоро"}
-              </span>
-            </div>
+            <p
+              className={
+                reward.unlocked
+                  ? "text-sm text-neutral-500"
+                  : "text-sm text-neutral-400"
+              }
+            >
+              {reward.level}
+            </p>
+            <h3 className="mt-1 text-lg font-semibold">{reward.title}</h3>
+            <p
+              className={
+                reward.unlocked
+                  ? "mt-2 text-sm leading-5 text-neutral-600"
+                  : "mt-2 text-sm leading-5 text-neutral-400"
+              }
+            >
+              {reward.description}
+            </p>
           </div>
         ))}
-      </div>
-
-      <p className="px-1 text-center text-[11px] leading-relaxed text-neutral-600">
-        Демо: статусы привилегий зафиксированы для показа интерфейса
-      </p>
+      </section>
     </div>
   );
 }
 
 function BonusScreen() {
   return (
-    <div className="space-y-4">
-      <section className={cardHighlight}>
-        <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-500">
-          Бонусы
-        </p>
-        <h2 className="mt-1.5 text-[26px] font-semibold leading-tight text-[#f4f1ea]">
-          Подтверждённые действия
-        </h2>
-        <p className="mt-2.5 text-[14px] leading-relaxed text-neutral-400">
-          Баллы за реальные шаги: визит в клуб и отметка в сториз.
-          В боевой версии здесь будет проверка администратором.
+    <div className="grid gap-4">
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <p className="text-sm text-neutral-400">Бонусы</p>
+        <h2 className="mt-1 text-2xl font-semibold">Подтверждённые действия</h2>
+        <p className="mt-2 text-sm leading-5 text-neutral-300">
+          Здесь клиент получает баллы за то, что полезно бизнесу: реальный визит
+          и сториз с отметкой.
         </p>
       </section>
 
-      <section className={card}>
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-sm">
-            ◎
-          </span>
-          <h3 className="text-[18px] font-semibold text-[#f4f1ea]">
-            Код визита
-          </h3>
-        </div>
-        <p className="mt-3 text-[14px] leading-relaxed text-neutral-400">
-          После сеанса администратор выдаст персональный код — введите его,
-          чтобы начислить баллы за визит.
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <h3 className="text-xl font-semibold">Код визита</h3>
+        <p className="mt-2 text-sm leading-5 text-neutral-400">
+          После визита клиент получает код у администратора и вводит его здесь.
         </p>
 
-        <div className="mt-4 rounded-2xl border border-dashed border-white/[0.12] bg-black/20 px-4 py-3.5 text-[15px] text-neutral-500">
-          LT-1206
+        <div className="mt-4 rounded-2xl bg-black/30 px-4 py-3 text-neutral-500">
+          Например: LT-1206
         </div>
 
-        <button className={`${btnPrimary} mt-4 w-full opacity-70`} disabled>
+        <button
+          className="mt-4 w-full rounded-2xl px-5 py-4 font-semibold text-white"
+          style={{ backgroundColor: brandRed }}
+        >
           Подтвердить визит
         </button>
-        <p className="mt-2.5 text-center text-[11px] text-neutral-600">
-          Кнопка неактивна в демо-режиме
-        </p>
       </section>
 
-      <section className={card}>
-        <div className="flex items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/[0.08] text-sm">
-            ✦
-          </span>
-          <h3 className="text-[18px] font-semibold text-[#f4f1ea]">
-            Сториз-бонус
-          </h3>
-        </div>
-        <p className="mt-3 text-[14px] leading-relaxed text-neutral-400">
-          Отметьте «Личное тело» в сториз, загрузите скрин — команда проверит
-          и начислит баллы в течение суток.
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <h3 className="text-xl font-semibold">Сториз-бонус</h3>
+        <p className="mt-2 text-sm leading-5 text-neutral-400">
+          Клиент отмечает салон в сториз, загружает скрин и получает баллы после
+          ручной проверки.
         </p>
 
-        <button className={`${btnPrimary} mt-4 w-full opacity-70`} disabled>
+        <button className="mt-4 w-full rounded-2xl bg-white px-5 py-4 font-semibold text-black">
           Загрузить скрин
         </button>
-        <p className="mt-2.5 text-center text-[11px] text-neutral-600">
-          Загрузка недоступна в демо · проверка вручную
+
+        <p className="mt-3 text-xs text-neutral-500">
+          Автоматическую проверку сториз в первой версии не делаем.
         </p>
       </section>
     </div>
   );
 }
 
-function ProfileScreen({ onSupport }: { onSupport: () => void }) {
-  const settings = [
-    { label: "Напоминания", value: "Утро, 9:00" },
-    { label: "Фокус", value: "Расслабление" },
-    { label: "Ограничения", value: "Не указаны" },
-  ];
-
+function ProfileScreen({
+  goal,
+  reminderTime,
+  interest,
+  onSupport,
+  onResetOnboarding,
+}: {
+  goal: string;
+  reminderTime: string;
+  interest: string;
+  onSupport: () => void;
+  onResetOnboarding: () => void;
+}) {
   return (
-    <div className="space-y-4">
-      <section className={cardHighlight}>
-        <p className="text-[12px] font-medium uppercase tracking-wide text-neutral-500">
-          Профиль
-        </p>
-        <div className="mt-3 flex items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-white/20 to-white/[0.06] text-[20px] font-semibold text-[#f4f1ea]">
-            Н
-          </div>
-          <div>
-            <h2 className="text-[24px] font-semibold text-[#f4f1ea]">Наташа</h2>
-            <p className="mt-0.5 text-[14px] text-neutral-400">
-              Участница клуба · демо-профиль
-            </p>
-          </div>
-        </div>
-        <p className="mt-4 rounded-2xl bg-white/[0.04] px-4 py-3 text-[14px] leading-relaxed text-neutral-300">
-          Цель: мягкое восстановление и расслабление после рабочих недель
+    <div className="grid gap-4">
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <p className="text-sm text-neutral-400">Профиль</p>
+        <h2 className="mt-1 text-2xl font-semibold">Наташа</h2>
+        <p className="mt-2 text-sm text-neutral-300">
+          Демо-клиент клуба “Личное тело”
         </p>
       </section>
 
-      <section className={card}>
-        <h3 className="text-[17px] font-semibold text-[#f4f1ea]">Настройки</h3>
-        <p className="mt-1 text-[13px] text-neutral-500">
-          Персонализация ритуалов и напоминаний
-        </p>
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <h3 className="text-xl font-semibold">Настройки</h3>
 
-        <div className="mt-4 divide-y divide-white/[0.06]">
-          {settings.map((item) => (
-            <div
-              key={item.label}
-              className="flex items-center justify-between py-3.5 first:pt-0 last:pb-0"
-            >
-              <span className="text-[14px] text-neutral-500">{item.label}</span>
-              <span className="text-[14px] font-medium text-neutral-200">
-                {item.value}
-              </span>
-            </div>
-          ))}
+        <div className="mt-4 grid gap-3 text-sm">
+          <ProfileRow label="Цель" value={goal || "Не выбрано"} />
+          <ProfileRow label="Напоминания" value={reminderTime || "Не выбрано"} />
+          <ProfileRow label="Интерес" value={interest || "Не выбрано"} />
         </div>
       </section>
 
       <button
         onClick={onSupport}
-        className={`${btnPrimary} w-full text-left`}
+        className="rounded-3xl px-5 py-4 text-left font-semibold text-white"
+        style={{ backgroundColor: brandRed }}
       >
-        Написать администратору
+        Связаться с админом
       </button>
 
-      <p className="px-1 text-center text-[11px] leading-relaxed text-neutral-600">
-        Демо: имя и настройки — пример для прототипа интерфейса
-      </p>
+      <button
+        onClick={onResetOnboarding}
+        className="rounded-3xl border border-white/10 bg-white/[0.06] px-5 py-4 text-left text-sm text-neutral-300"
+      >
+        Изменить анкету
+      </button>
+    </div>
+  );
+}
+
+function ProfileRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between border-b border-white/10 pb-3 last:border-b-0 last:pb-0">
+      <span className="text-neutral-400">{label}</span>
+      <span>{value}</span>
     </div>
   );
 }
@@ -603,17 +721,17 @@ function BottomNavigation({
   activeTab: Tab;
   onChange: (tab: Tab) => void;
 }) {
-  const tabs: { id: Tab; label: string; icon: string }[] = [
-    { id: "today", label: "Сегодня", icon: "○" },
-    { id: "progress", label: "Прогресс", icon: "↗" },
-    { id: "rewards", label: "Привилегии", icon: "★" },
-    { id: "bonus", label: "Бонусы", icon: "+" },
-    { id: "profile", label: "Профиль", icon: "◎" },
+  const tabs: { id: Tab; label: string }[] = [
+    { id: "today", label: "Сегодня" },
+    { id: "progress", label: "Прогресс" },
+    { id: "rewards", label: "Привилегии" },
+    { id: "bonus", label: "Бонусы" },
+    { id: "profile", label: "Профиль" },
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-white/[0.06] bg-[#121214]/90 px-2 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl">
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-0.5">
+    <nav className="fixed bottom-0 left-0 right-0 border-t border-white/10 bg-[#151515]/95 px-3 pb-5 pt-3 backdrop-blur">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-1">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
 
@@ -621,22 +739,14 @@ function BottomNavigation({
             <button
               key={tab.id}
               onClick={() => onChange(tab.id)}
-              className={`flex flex-col items-center gap-0.5 rounded-2xl px-1 py-2 transition ${
+              className={
                 isActive
-                  ? "bg-white/[0.1] text-[#f4f1ea]"
-                  : "text-neutral-500 active:bg-white/[0.04]"
-              }`}
+                  ? "rounded-2xl px-2 py-3 text-xs font-semibold text-white"
+                  : "rounded-2xl px-2 py-3 text-xs text-neutral-400"
+              }
+              style={isActive ? { backgroundColor: brandRed } : undefined}
             >
-              <span className={`text-[15px] ${isActive ? "opacity-100" : "opacity-60"}`}>
-                {tab.icon}
-              </span>
-              <span
-                className={`text-[10px] leading-tight ${
-                  isActive ? "font-semibold" : "font-medium"
-                }`}
-              >
-                {tab.label}
-              </span>
+              {tab.label}
             </button>
           );
         })}
