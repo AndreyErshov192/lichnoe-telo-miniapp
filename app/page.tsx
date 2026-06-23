@@ -78,7 +78,7 @@ export default function Home() {
   const [completedMissions, setCompletedMissions] = useState<number[]>([]);
   const [visitConfirmed, setVisitConfirmed] = useState(false);
 
-  const basePoints = 80;
+  const basePoints = 50;
   const visitPoints = visitConfirmed ? 100 : 0;
 
   const earnedPoints = completedMissions.reduce((sum, missionId) => {
@@ -211,33 +211,35 @@ export default function Home() {
 function IntroScreen({ onStart }: { onStart: () => void }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <div className="mb-10">
+      <div className="mb-8">
         <div className="inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-neutral-300">
-          Telegram Mini App · демо-прототип
+          Клуб Личное тело
         </div>
 
-        <h1 className="mt-6 text-5xl font-semibold tracking-tight">
-          Личное тело
+        <h1 className="mt-6 text-4xl font-semibold leading-tight tracking-tight">
+          Добро пожаловать в клуб “Личного тела”
         </h1>
 
         <p className="mt-4 text-lg leading-7 text-neutral-300">
-          Клуб восстановления, где ежедневные ритуалы и визиты превращаются в
-          баллы, уровни и клубные привилегии.
+          Персональные рекомендации, баллы за активность и специальные
+          предложения для участников клуба.
         </p>
       </div>
 
       <div className="grid gap-3">
         <FeatureCard
-          title="Миссии"
-          text="Короткие действия, которые удерживают контакт с клиентом между визитами."
+          title="Приветственный бонус"
+          text="+50 баллов после вступления в клуб"
         />
+
         <FeatureCard
-          title="Баллы и уровни"
-          text="Клиент видит прогресс и открывает статус внутри клуба."
+          title="Предложение месяца"
+          text="Специальное условие для участников клуба после первого визита"
         />
+
         <FeatureCard
-          title="Визиты через 1С"
-          text="После подтверждённого визита баллы начисляются без кода и лишних действий клиента."
+          title="Что внутри клуба"
+          text="Ежедневные миссии, баллы, уровни и привилегии Личного тела"
         />
       </div>
 
@@ -251,7 +253,7 @@ function IntroScreen({ onStart }: { onStart: () => void }) {
         </button>
 
         <p className="mt-4 text-center text-xs leading-5 text-neutral-500">
-          Это демонстрационная версия. Данные пока не сохраняются в базе.
+          Первый шаг — короткая настройка профиля. Это займёт меньше минуты.
         </p>
       </div>
     </div>
