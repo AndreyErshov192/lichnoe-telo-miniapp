@@ -64,7 +64,30 @@ const rewards = [
 
 const goals = ["Восстановление", "Расслабление", "Тонус", "Снять напряжение"];
 const reminderTimes = ["Утро", "День", "Вечер"];
-const interests = ["Процедуры", "Уход", "Ритуалы", "Закрытые форматы"];
+
+const interestOptions = [
+  "Массаж",
+  "Хаммам",
+  "Уход",
+  "Антистресс",
+  "Тонус",
+  "Закрытые форматы",
+];
+
+const demoSpecialist = {
+  name: "Анна Морозова",
+  role: "Специалист по восстановлению",
+  direction: "Массаж · хаммам · антистресс",
+  recommendation: "Курс 5 процедур, следующий визит через 7–10 дней.",
+};
+
+const demoUpcomingVisit = {
+  date: "28 июня",
+  time: "16:00",
+  service: "Хаммам",
+  specialist: "Анна Морозова",
+  status: "Запланирован",
+};
 
 export default function Home() {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("intro");
@@ -72,7 +95,7 @@ export default function Home() {
 
   const [goal, setGoal] = useState("");
   const [reminderTime, setReminderTime] = useState("");
-  const [interest, setInterest] = useState("");
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [completedMissions, setCompletedMissions] = useState<number[]>([]);
@@ -110,13 +133,23 @@ export default function Home() {
     setCompletedMissions([...completedMissions, missionId]);
   };
 
+  const toggleInterest = (interest: string) => {
+    setSelectedInterests((current) => {
+      if (current.includes(interest)) {
+        return current.filter((item) => item !== interest);
+      }
+
+      return [...current, interest];
+    });
+  };
+
   const confirmVisitDemo = () => {
     if (visitConfirmed) return;
     setVisitConfirmed(true);
   };
 
   const completeOnboarding = () => {
-    if (!goal || !reminderTime || !interest) return;
+    if (!goal || !reminderTime || selectedInterests.length === 0) return;
     setIsOnboardingComplete(true);
     setActiveTab("today");
   };
@@ -139,10 +172,10 @@ export default function Home() {
             <OnboardingForm
               goal={goal}
               reminderTime={reminderTime}
-              interest={interest}
+              selectedInterests={selectedInterests}
               onGoalChange={setGoal}
               onReminderTimeChange={setReminderTime}
-              onInterestChange={setInterest}
+              onToggleInterest={toggleInterest}
               onBack={() => setOnboardingStep("intro")}
               onComplete={completeOnboarding}
             />
@@ -166,6 +199,7 @@ export default function Home() {
             completedMissions={completedMissions}
             onCompleteMission={completeMission}
             goal={goal}
+            selectedInterests={selectedInterests}
           />
         )}
 
@@ -193,7 +227,8 @@ export default function Home() {
           <ProfileScreen
             goal={goal}
             reminderTime={reminderTime}
-            interest={interest}
+            selectedInterests={selectedInterests}
+            visitConfirmed={visitConfirmed}
             onSupport={openSupport}
             onResetOnboarding={() => {
               setIsOnboardingComplete(false);
@@ -272,23 +307,25 @@ function FeatureCard({ title, text }: { title: string; text: string }) {
 function OnboardingForm({
   goal,
   reminderTime,
-  interest,
+  selectedInterests,
   onGoalChange,
   onReminderTimeChange,
-  onInterestChange,
+  onToggleInterest,
   onBack,
   onComplete,
 }: {
   goal: string;
   reminderTime: string;
-  interest: string;
+  selectedInterests: string[];
   onGoalChange: (value: string) => void;
   onReminderTimeChange: (value: string) => void;
-  onInterestChange: (value: string) => void;
+  onToggleInterest: (value: string) => void;
   onBack: () => void;
   onComplete: () => void;
 }) {
-  const isReady = Boolean(goal && reminderTime && interest);
+  const isReady = Boolean(
+    goal && reminderTime && selectedInterests.length > 0
+  );
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -321,11 +358,12 @@ function OnboardingForm({
           onChange={onReminderTimeChange}
         />
 
-        <ChoiceBlock
+        <MultiChoiceBlock
           title="Что интереснее всего?"
-          options={interests}
-          value={interest}
-          onChange={onInterestChange}
+          subtitle="Можно выбрать несколько вариантов."
+          options={interestOptions}
+          values={selectedInterests}
+          onToggle={onToggleInterest}
         />
       </div>
 
@@ -390,6 +428,49 @@ function ChoiceBlock({
   );
 }
 
+function MultiChoiceBlock({
+  title,
+  subtitle,
+  options,
+  values,
+  onToggle,
+}: {
+  title: string;
+  subtitle: string;
+  options: string[];
+  values: string[];
+  onToggle: (value: string) => void;
+}) {
+  return (
+    <section>
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="mt-1 text-sm text-neutral-400">{subtitle}</p>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {options.map((option) => {
+          const isSelected = values.includes(option);
+
+          return (
+            <button
+              key={option}
+              onClick={() => onToggle(option)}
+              className={
+                isSelected
+                  ? "rounded-2xl px-4 py-4 text-left text-sm font-semibold text-white"
+                  : "rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-4 text-left text-sm text-neutral-300"
+              }
+              style={isSelected ? { backgroundColor: brandRed } : undefined}
+            >
+              {isSelected ? "✓ " : ""}
+              {option}
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function Header({
   totalPoints,
   currentLevel,
@@ -438,6 +519,7 @@ function TodayScreen({
   completedMissions,
   onCompleteMission,
   goal,
+  selectedInterests,
 }: {
   totalPoints: number;
   currentLevel: string;
@@ -446,6 +528,7 @@ function TodayScreen({
   completedMissions: number[];
   onCompleteMission: (missionId: number) => void;
   goal: string;
+  selectedInterests: string[];
 }) {
   return (
     <div>
@@ -453,8 +536,11 @@ function TodayScreen({
         <p className="text-sm text-neutral-400">Сегодня</p>
         <h2 className="mt-1 text-2xl font-semibold">3 миссии готовы</h2>
         <p className="mt-2 text-sm leading-5 text-neutral-300">
-          Цель клиента: {goal || "восстановление"}. Миссии дают лёгкое касание
-          между визитами и вовлекают в клуб.
+          Цель клиента: {goal || "восстановление"}. Интересы:{" "}
+          {selectedInterests.length > 0
+            ? selectedInterests.join(", ")
+            : "не выбраны"}
+          .
         </p>
 
         <div className="mt-5">
@@ -660,11 +746,36 @@ function ClubScreen({
       </section>
 
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+        <p className="text-sm text-neutral-400">Предложения и сообщения</p>
+        <h2 className="mt-1 text-2xl font-semibold">
+          Индивидуально или группе
+        </h2>
+        <p className="mt-2 text-sm leading-5 text-neutral-300">
+          В рабочей версии администратор сможет отправлять предложения одному
+          клиенту или выбранной группе: по интересам, уровню, специалисту,
+          визитам или давности посещения.
+        </p>
+
+        <div className="mt-4 grid gap-3">
+          <OfferCard
+            title="Индивидуальное предложение"
+            text="Например: персональная рекомендация от специалиста после визита."
+          />
+          <OfferCard
+            title="Группа клиентов"
+            text="Например: всем, кто выбрал хаммам, давно не был или достиг уровня “Резидент”."
+          />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm text-neutral-400">Подтверждение визита</p>
             <h3 className="mt-1 text-xl font-semibold">
-              {visitConfirmed ? "Визит подтверждён" : "Визит ожидает подтверждения"}
+              {visitConfirmed
+                ? "Визит подтверждён"
+                : "Визит ожидает подтверждения"}
             </h3>
             <p className="mt-2 text-sm leading-5 text-neutral-400">
               {visitConfirmed
@@ -699,22 +810,6 @@ function ClubScreen({
           приходит из 1С или из админки.
         </p>
       </section>
-
-      <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
-        <h3 className="text-xl font-semibold">Почему это удобно клиенту</h3>
-
-        <div className="mt-4 grid gap-3 text-sm text-neutral-300">
-          <div className="rounded-2xl bg-black/25 p-4">
-            Не нужно вводить код после процедуры.
-          </div>
-          <div className="rounded-2xl bg-black/25 p-4">
-            Баллы появляются после подтверждения визита в системе.
-          </div>
-          <div className="rounded-2xl bg-black/25 p-4">
-            Прогресс ведёт клиента к новым привилегиям и повторным визитам.
-          </div>
-        </div>
-      </section>
     </div>
   );
 }
@@ -745,16 +840,27 @@ function PointRule({
   );
 }
 
+function OfferCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-2xl bg-black/25 p-4">
+      <h3 className="font-semibold">{title}</h3>
+      <p className="mt-1 text-sm leading-5 text-neutral-400">{text}</p>
+    </div>
+  );
+}
+
 function ProfileScreen({
   goal,
   reminderTime,
-  interest,
+  selectedInterests,
+  visitConfirmed,
   onSupport,
   onResetOnboarding,
 }: {
   goal: string;
   reminderTime: string;
-  interest: string;
+  selectedInterests: string[];
+  visitConfirmed: boolean;
   onSupport: () => void;
   onResetOnboarding: () => void;
 }) {
@@ -768,13 +874,24 @@ function ProfileScreen({
         </p>
       </section>
 
+      <SpecialistCard />
+
+      <VisitsBlock visitConfirmed={visitConfirmed} />
+
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
         <h3 className="text-xl font-semibold">Настройки</h3>
 
         <div className="mt-4 grid gap-3 text-sm">
           <ProfileRow label="Цель" value={goal || "Не выбрано"} />
           <ProfileRow label="Напоминания" value={reminderTime || "Не выбрано"} />
-          <ProfileRow label="Интерес" value={interest || "Не выбрано"} />
+          <ProfileRow
+            label="Интересы"
+            value={
+              selectedInterests.length > 0
+                ? selectedInterests.join(", ")
+                : "Не выбрано"
+            }
+          />
         </div>
       </section>
 
@@ -796,11 +913,114 @@ function ProfileScreen({
   );
 }
 
+function SpecialistCard() {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+      <p className="text-sm text-neutral-400">Ваш специалист</p>
+
+      <div className="mt-4 flex items-start gap-4">
+        <div
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold text-white"
+          style={{ backgroundColor: brandRed }}
+        >
+          А
+        </div>
+
+        <div>
+          <h3 className="text-xl font-semibold">{demoSpecialist.name}</h3>
+          <p className="mt-1 text-sm text-neutral-400">{demoSpecialist.role}</p>
+          <p className="mt-1 text-sm text-neutral-300">
+            {demoSpecialist.direction}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-2xl bg-black/25 p-4">
+        <p className="text-sm text-neutral-400">Рекомендация</p>
+        <p className="mt-1 text-sm leading-5 text-neutral-300">
+          {demoSpecialist.recommendation}
+        </p>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-neutral-500">
+        В рабочей версии специалист и рекомендации могут подтягиваться из 1С или
+        заполняться администратором.
+      </p>
+    </section>
+  );
+}
+
+function VisitsBlock({ visitConfirmed }: { visitConfirmed: boolean }) {
+  return (
+    <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
+      <p className="text-sm text-neutral-400">Мои визиты</p>
+      <h3 className="mt-1 text-xl font-semibold">Ближайший визит</h3>
+
+      <div className="mt-4 rounded-2xl bg-black/25 p-4">
+        <div className="flex justify-between gap-4">
+          <div>
+            <p className="font-semibold">
+              {demoUpcomingVisit.date}, {demoUpcomingVisit.time}
+            </p>
+            <p className="mt-1 text-sm text-neutral-300">
+              {demoUpcomingVisit.service}
+            </p>
+            <p className="mt-1 text-sm text-neutral-400">
+              Специалист: {demoUpcomingVisit.specialist}
+            </p>
+          </div>
+
+          <div className="h-fit rounded-full bg-white/10 px-3 py-1 text-xs text-neutral-300">
+            {demoUpcomingVisit.status}
+          </div>
+        </div>
+      </div>
+
+      <h3 className="mt-5 text-xl font-semibold">История визитов</h3>
+
+      {visitConfirmed ? (
+        <div className="mt-3 rounded-2xl bg-black/25 p-4">
+          <div className="flex justify-between gap-4">
+            <div>
+              <p className="font-semibold">Сегодня</p>
+              <p className="mt-1 text-sm text-neutral-300">
+                Визит подтверждён
+              </p>
+              <p className="mt-1 text-sm text-neutral-400">
+                Начисление за посещение
+              </p>
+            </div>
+
+            <div
+              className="h-fit rounded-2xl px-3 py-2 text-sm font-semibold text-white"
+              style={{ backgroundColor: brandRed }}
+            >
+              +100
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-3 rounded-2xl bg-black/25 p-4">
+          <p className="text-sm leading-5 text-neutral-400">
+            История появится после подтверждения визита. В рабочей версии данные
+            могут подтягиваться из 1С.
+          </p>
+        </div>
+      )}
+
+      <p className="mt-3 text-xs leading-5 text-neutral-500">
+        Для синхронизации с 1С нужно получить данные по клиентам, записям,
+        специалистам и статусам визитов.
+      </p>
+    </section>
+  );
+}
+
 function ProfileRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between border-b border-white/10 pb-3 last:border-b-0 last:pb-0">
-      <span className="text-neutral-400">{label}</span>
-      <span>{value}</span>
+    <div className="flex justify-between gap-4 border-b border-white/10 pb-3 last:border-b-0 last:pb-0">
+      <span className="shrink-0 text-neutral-400">{label}</span>
+      <span className="text-right">{value}</span>
     </div>
   );
 }
