@@ -102,15 +102,23 @@ export default function Home() {
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
 
+    console.log("TG:", tg);
+    console.log("USER:", tg?.initDataUnsafe?.user);
+
 if (tg?.initDataUnsafe?.user) {
   setTelegramId(String(tg.initDataUnsafe.user.id));
   setTelegramName(tg.initDataUnsafe.user.first_name);
 }
   loadMissions();
   loadRewards();
-  loadCurrentUser();
   loadCompletedMissions();
 }, []);
+
+useEffect(() => {
+  if (!telegramId) return;
+
+  loadCurrentUser();
+}, [telegramId, telegramName]);
 
 async function loadMissions() {
   const { data, error } = await supabase
@@ -142,16 +150,42 @@ async function loadRewards() {
 }
 
 async function loadCurrentUser() {
+
+  console.log("Ищем пользователя:", telegramId, telegramName);
+
   const { data, error } = await supabase
     .from("users")
     .select("*")
-    .eq("telegram_id", "demo_user")
+    .eq("telegram_id", telegramId)
     .limit(1)
     .maybeSingle();
 
   if (error) {
     return;
   }
+
+if (!data && telegramId) {
+  const { data: newUser, error: createError } = await supabase
+    .from("users")
+    .insert({
+      telegram_id: telegramId,
+      name: telegramName,
+      points_balance: 0,
+    })
+    .select()
+    .single();
+
+    if (createError) {
+  console.error("Ошибка создания пользователя:", createError);
+  return;
+}
+
+  if (newUser) {
+    setBasePoints(0);
+  }
+
+  return;
+}
 
   if (data) {
   setGoal(data.goal ?? "");
