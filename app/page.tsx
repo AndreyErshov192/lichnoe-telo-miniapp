@@ -97,6 +97,8 @@ export default function Home() {
   const [telegramId, setTelegramId] = useState("");
   const [telegramName, setTelegramName] = useState("");
 
+  console.log("TELEGRAM USER:", telegramId, telegramName);
+
   useEffect(() => {
     const tg = (window as any).Telegram?.WebApp;
 
@@ -323,7 +325,12 @@ setCompletedMissions([...completedMissions, missionId]);
   return (
     <main className="min-h-screen bg-[#0E0E0E] text-white">
       <section className="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-24 pt-7">
-        <Header totalPoints={totalPoints} currentLevel={currentLevel.name} />
+        <Header
+         totalPoints={totalPoints}
+         currentLevel={currentLevel.name}
+         telegramName={telegramName}
+         telegramId={telegramId}
+/>
 
         {activeTab === "today" && (
           <TodayScreen missions={missions} 
@@ -614,10 +621,13 @@ function MultiChoiceBlock({
 function Header({
   totalPoints,
   currentLevel,
+  telegramName,
+  telegramId,
 }: {
   totalPoints: number;
   currentLevel: string;
-  
+  telegramName: string;
+  telegramId: string;
 }) {
   const isDemo = true;
   return (
@@ -629,7 +639,11 @@ function Header({
             Личное тело
           </h1>
         </div>
-
+{telegramName && (
+  <p className="mt-2 text-sm text-neutral-400">
+    Telegram: {telegramName} · ID: {telegramId}
+  </p>
+)}
         {isDemo && (
   <div
     className="rounded-full px-3 py-2 text-xs font-semibold text-white"
