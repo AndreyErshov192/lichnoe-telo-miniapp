@@ -1,32 +1,22 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 type Tab = "today" | "progress" | "rewards" | "club" | "profile";
 type OnboardingStep = "intro" | "form";
+type Mission = {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  category?: string;
+  is_active?: boolean;
+};
 
 const brandRed = "#E30613";
 
-const missions = [
-  {
-    id: 1,
-    title: "2 минуты тишины",
-    description: "Отложите телефон и побудьте в тишине без задач и уведомлений.",
-    points: 10,
-  },
-  {
-    id: 2,
-    title: "Расслабить плечи",
-    description: "Сделайте 5 медленных кругов плечами и отпустите напряжение.",
-    points: 10,
-  },
-  {
-    id: 3,
-    title: "Стакан воды",
-    description: "Выпейте стакан воды до кофе, сладкого или нового дела.",
-    points: 5,
-  },
-];
+const demoMissions: Mission[] = [];
 
 const levels = [
   { name: "Гость", min: 0 },
@@ -73,7 +63,6 @@ const interestOptions = [
   "Тонус",
   "Закрытые форматы",
 ];
-
 const demoSpecialist = {
   name: "Анна Морозова",
   role: "Специалист по восстановлению",
@@ -88,7 +77,6 @@ const demoUpcomingVisit = {
   specialist: "Анна Морозова",
   status: "Запланирован",
 };
-
 export default function Home() {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("intro");
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
@@ -98,10 +86,89 @@ export default function Home() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
   const [activeTab, setActiveTab] = useState<Tab>("today");
-  const [completedMissions, setCompletedMissions] = useState<number[]>([]);
+  const [completedMissions, setCompletedMissions] = useState<string[]>([]);
   const [visitConfirmed, setVisitConfirmed] = useState(false);
+  const [missions, setMissions] = useState<Mission[]>(demoMissions);
 
-  const basePoints = 50;
+  const [rewards, setRewards] = useState<any[]>([]); 
+
+  const [basePoints, setBasePoints] = useState(0);
+
+  useEffect(() => {
+  loadMissions();
+  loadRewards();
+  loadCurrentUser();
+  loadCompletedMissions();
+}, []);
+
+async function loadMissions() {
+  const { data, error } = await supabase
+    .from("missions")
+    .select("*")
+    .eq("is_active", true);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setMissions(data ?? []);
+
+}
+
+async function loadRewards() {
+  const { data, error } = await supabase
+    .from("rewards")
+    .select("*")
+    .eq("is_active", true);
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setRewards(data ?? []);
+}
+
+async function loadCurrentUser() {
+  const { data, error } = await supabase
+    .from("users")
+    .select("*")
+    .eq("telegram_id", "demo_user")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    return;
+  }
+
+  if (data) {
+  setGoal(data.goal ?? "");
+  setReminderTime(data.reminder_time ?? "");
+  setBasePoints(data.points_balance ?? 0);
+  setSelectedInterests(
+    data.interests ? data.interests.split(",") : []
+  );
+  setIsOnboardingComplete(true);
+  setActiveTab("today");
+}
+}
+async function loadCompletedMissions() {
+  const { data, error } = await supabase
+    .from("user_missions")
+    .select("mission_id")
+    .eq("user_id", "096bc057-cd36-4458-bb70-be28c98f78ca")
+    .eq("status", "completed");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setCompletedMissions(
+  Array.from(new Set(data?.map((item) => item.mission_id) ?? []))
+);
+}
   const visitPoints = visitConfirmed ? 100 : 0;
 
   const earnedPoints = completedMissions.reduce((sum, missionId) => {
@@ -128,10 +195,52 @@ export default function Home() {
     return Math.min(100, Math.max(0, Math.round(progress)));
   }, [currentLevel.min, nextLevel, totalPoints]);
 
-  const completeMission = (missionId: number) => {
-    if (completedMissions.includes(missionId)) return;
-    setCompletedMissions([...completedMissions, missionId]);
-  };
+  const completeMission = async (missionId: string) => {
+  if (completedMissions.includes(missionId)) return;
+
+  const { error } = await supabase
+    .from("user_missions")
+    .insert({
+      user_id: "096bc057-cd36-4458-bb70-be28c98f78ca",
+      mission_id: missionId,
+      status: "completed",
+      completed_at: new Date().toISOString(),
+    });
+
+  if (error) {
+  console.error(error);
+  alert("Ошибка сохранения миссии");
+  return;
+}
+
+const mission = missions.find((item) => item.id === missionId);
+const pointsToAdd = mission?.points ?? 0;
+
+await supabase
+  .from("points_transactions")
+  .insert({
+    user_id: "096bc057-cd36-4458-bb70-be28c98f78ca",
+    type: "mission",
+    amount: pointsToAdd,
+    source: mission?.title ?? "Миссия",
+    source_id: missionId,
+  });
+
+const { data: updatedUser, error: updateUserError } = await supabase
+  .from("users")
+  .update({
+    points_balance: totalPoints + pointsToAdd,
+  })
+  .eq("id", "096bc057-cd36-4458-bb70-be28c98f78ca")
+  .select();
+if (updateUserError) {
+  console.error(updateUserError);
+  alert("Ошибка начисления баллов");
+  return;
+}
+
+setCompletedMissions([...completedMissions, missionId]);
+};
 
   const toggleInterest = (interest: string) => {
     setSelectedInterests((current) => {
@@ -148,11 +257,28 @@ export default function Home() {
     setVisitConfirmed(true);
   };
 
-  const completeOnboarding = () => {
-    if (!goal || !reminderTime || selectedInterests.length === 0) return;
-    setIsOnboardingComplete(true);
-    setActiveTab("today");
-  };
+  const completeOnboarding = async () => {
+  if (!goal || !reminderTime || selectedInterests.length === 0) return;
+
+  const { data, error } = await supabase
+    .from("users")
+    .update({
+  goal: goal,
+  reminder_time: reminderTime,
+  interests: selectedInterests.join(","),
+})
+.eq("telegram_id", "demo_user")
+.select()
+.single();
+
+  if (error) {
+    alert("Ошибка сохранения пользователя");
+    return;
+  }
+
+  setIsOnboardingComplete(true);
+  setActiveTab("today");
+};
 
   const openSupport = () => {
     alert(
@@ -191,7 +317,7 @@ export default function Home() {
         <Header totalPoints={totalPoints} currentLevel={currentLevel.name} />
 
         {activeTab === "today" && (
-          <TodayScreen
+          <TodayScreen missions={missions} 
             totalPoints={totalPoints}
             currentLevel={currentLevel.name}
             nextLevel={nextLevel?.name}
@@ -214,7 +340,12 @@ export default function Home() {
           />
         )}
 
-        {activeTab === "rewards" && <RewardsScreen />}
+        {activeTab === "rewards" && (
+  <RewardsScreen
+    rewards={rewards}
+    totalPoints={totalPoints}
+  />
+)}
 
         {activeTab === "club" && (
           <ClubScreen
@@ -477,7 +608,9 @@ function Header({
 }: {
   totalPoints: number;
   currentLevel: string;
+  
 }) {
+  const isDemo = true;
   return (
     <header className="mb-6">
       <div className="flex items-center justify-between">
@@ -488,12 +621,14 @@ function Header({
           </h1>
         </div>
 
-        <div
-          className="rounded-full px-3 py-2 text-xs font-semibold text-white"
-          style={{ backgroundColor: brandRed }}
-        >
-          демо
-        </div>
+        {isDemo && (
+  <div
+    className="rounded-full px-3 py-2 text-xs font-semibold text-white"
+    style={{ backgroundColor: brandRed }}
+  >
+    демо
+  </div>
+)}
       </div>
 
       <div className="mt-5 flex items-center justify-between rounded-3xl border border-white/10 bg-white/[0.06] p-4">
@@ -512,6 +647,7 @@ function Header({
 }
 
 function TodayScreen({
+  missions,
   totalPoints,
   currentLevel,
   nextLevel,
@@ -521,12 +657,13 @@ function TodayScreen({
   goal,
   selectedInterests,
 }: {
+  missions: Mission[];
   totalPoints: number;
   currentLevel: string;
   nextLevel?: string;
   progressPercent: number;
-  completedMissions: number[];
-  onCompleteMission: (missionId: number) => void;
+  completedMissions: string[];
+  onCompleteMission: (missionId: string) => void;
   goal: string;
   selectedInterests: string[];
 }) {
@@ -565,6 +702,7 @@ function TodayScreen({
       <section className="mt-5 grid gap-3">
         {missions.map((mission) => {
           const isCompleted = completedMissions.includes(mission.id);
+          
 
           return (
             <div
@@ -660,7 +798,13 @@ function StatCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function RewardsScreen() {
+function RewardsScreen({
+  rewards,
+  totalPoints,
+}: {
+  rewards: any[];
+  totalPoints: number;
+}) {
   return (
     <div>
       <section className="rounded-3xl border border-white/10 bg-white/[0.06] p-5">
@@ -677,24 +821,24 @@ function RewardsScreen() {
           <div
             key={reward.title}
             className={
-              reward.unlocked
+              totalPoints >= reward.cost_points
                 ? "rounded-3xl bg-white p-4 text-black"
                 : "rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-white"
             }
           >
             <p
               className={
-                reward.unlocked
+                totalPoints >= reward.cost_points
                   ? "text-sm text-neutral-500"
                   : "text-sm text-neutral-400"
               }
             >
-              {reward.level}
+              {reward.cost_points} баллов
             </p>
             <h3 className="mt-1 text-lg font-semibold">{reward.title}</h3>
             <p
               className={
-                reward.unlocked
+                totalPoints >= reward.cost_points
                   ? "mt-2 text-sm leading-5 text-neutral-600"
                   : "mt-2 text-sm leading-5 text-neutral-400"
               }
@@ -734,10 +878,10 @@ function ClubScreen({
           points="+5 / +10"
         />
         <PointRule
-          title="Подтверждённый визит"
-          text="В рабочей версии визит подтверждается через 1С или администратора."
-          points="+100"
-        />
+         title="Подтверждённый визит"
+         text="После подтверждения посещения в 1С баллы начисляются автоматически."
+         points="+100"
+/>
         <PointRule
           title="Клубные форматы"
           text="Закрытые события, спецпредложения и активности можно добавить позже."
@@ -751,9 +895,7 @@ function ClubScreen({
           Индивидуально или группе
         </h2>
         <p className="mt-2 text-sm leading-5 text-neutral-300">
-          В рабочей версии администратор сможет отправлять предложения одному
-          клиенту или выбранной группе: по интересам, уровню, специалисту,
-          визитам или давности посещения.
+          В рабочей версии персональные предложения будут формироваться автоматически на основе истории посещений, интересов клиента и данных из 1С.
         </p>
 
         <div className="mt-4 grid gap-3">
@@ -780,13 +922,13 @@ function ClubScreen({
             <p className="mt-2 text-sm leading-5 text-neutral-400">
               {visitConfirmed
                 ? "Начислено +100 баллов. В полной версии клиент получит уведомление в Telegram."
-                : "Клиенту не нужно вводить код. После визита данные могут прийти из 1С, и баллы начислятся автоматически."}
+                : "После подтверждения посещения в 1С баллы начислятся автоматически и появятся в Telegram."}
             </p>
           </div>
 
           <div
             className="rounded-2xl px-4 py-3 text-center text-sm font-semibold text-white"
-            style={{ backgroundColor: visitConfirmed ? brandRed : "#333333" }}
+            style={{ backgroundColor: visitConfirmed ? brandRed :"#333333" }}
           >
             +100
           </div>
@@ -806,8 +948,7 @@ function ClubScreen({
         </button>
 
         <p className="mt-3 text-xs leading-5 text-neutral-500">
-          Кнопка нужна только для презентации. В рабочей версии подтверждение
-          приходит из 1С или из админки.
+          Кнопка используется только в демо. В рабочей версии подтверждение посещения приходит автоматически после синхронизации с 1с.
         </p>
       </section>
     </div>
