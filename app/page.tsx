@@ -94,7 +94,16 @@ export default function Home() {
 
   const [basePoints, setBasePoints] = useState(0);
 
+  const [telegramId, setTelegramId] = useState("");
+  const [telegramName, setTelegramName] = useState("");
+
   useEffect(() => {
+    const tg = (window as any).Telegram?.WebApp;
+
+if (tg?.initDataUnsafe?.user) {
+  setTelegramId(String(tg.initDataUnsafe.user.id));
+  setTelegramName(tg.initDataUnsafe.user.first_name);
+}
   loadMissions();
   loadRewards();
   loadCurrentUser();
