@@ -77,6 +77,15 @@ const demoUpcomingVisit = {
   specialist: "Анна Морозова",
   status: "Запланирован",
 };
+
+function getLocalDateString(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export default function Home() {
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("intro");
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
@@ -93,6 +102,8 @@ export default function Home() {
   const [rewards, setRewards] = useState<any[]>([]); 
 
   const [basePoints, setBasePoints] = useState(0);
+
+  const [streakCount, setStreakCount] = useState(0);
 
   const [telegramId, setTelegramId] = useState("");
   const [telegramName, setTelegramName] = useState("");
@@ -190,6 +201,7 @@ if (!data && telegramId) {
   if (newUser) {
   setCurrentUserId(newUser.id);
   setBasePoints(0);
+  setStreakCount(0);
   setIsOnboardingComplete(false);
   setOnboardingStep("intro");
 }
@@ -202,6 +214,7 @@ if (!data && telegramId) {
   setGoal(data.goal ?? "");
   setReminderTime(data.reminder_time ?? "");
   setBasePoints(data.points_balance ?? 0);
+  setStreakCount(data.streak_count ?? 0);
   setSelectedInterests(
     data.interests ? data.interests.split(",") : []
   );
@@ -338,6 +351,43 @@ if (updateUserError) {
   console.error(updateUserError);
   alert("Ошибка начисления баллов");
   return;
+}
+
+const today = new Date();
+const yesterday = new Date();
+
+yesterday.setDate(today.getDate() - 1);
+
+const todayString = getLocalDateString(today);
+const yesterdayString = getLocalDateString(yesterday);
+
+const { data: streakUser, error: streakLoadError } = await supabase
+  .from("users")
+  .select("streak_count, last_active_date")
+  .eq("id", currentUserId)
+  .single();
+
+if (streakLoadError) {
+  console.error("Ошибка загрузки стрика:", streakLoadError);
+} else if (streakUser.last_active_date !== todayString) {
+  const newStreakCount =
+    streakUser.last_active_date === yesterdayString
+      ? Number(streakUser.streak_count ?? 0) + 1
+      : 1;
+
+  const { error: streakUpdateError } = await supabase
+    .from("users")
+    .update({
+      streak_count: newStreakCount,
+      last_active_date: todayString,
+    })
+    .eq("id", currentUserId);
+
+  if (streakUpdateError) {
+    console.error("Ошибка обновления стрика:", streakUpdateError);
+  } else {
+    setStreakCount(newStreakCount);
+  }
 }
 
 setBasePoints(totalPoints + pointsToAdd);
