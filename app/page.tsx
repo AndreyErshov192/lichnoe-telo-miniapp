@@ -317,9 +317,6 @@ if (todayMissionPoints + missionPoints > 30) {
   return;
 }
 
-const mission = missions.find((item) => item.id === missionId);
-const pointsToAdd = mission?.points ?? 0;
-
 await supabase
   .from("points_transactions")
   .insert({
