@@ -229,7 +229,7 @@ async function loadCompletedMissions() {
     return sum + (mission?.points ?? 0);
   }, 0);
 
-  const totalPoints = basePoints + earnedPoints + visitPoints;
+  const totalPoints = basePoints;
 
   const currentLevel = useMemo(() => {
     const availableLevels = levels.filter((level) => totalPoints >= level.min);
@@ -291,6 +291,8 @@ if (updateUserError) {
   alert("Ошибка начисления баллов");
   return;
 }
+
+setBasePoints(totalPoints + pointsToAdd);
 
 setCompletedMissions([...completedMissions, missionId]);
 };
