@@ -409,10 +409,43 @@ setCompletedMissions([...completedMissions, missionId]);
     });
   };
 
-  const confirmVisitDemo = () => {
-    if (visitConfirmed) return;
-    setVisitConfirmed(true);
-  };
+  const confirmVisitDemo = async () => {
+  if (visitConfirmed || !currentUserId) return;
+
+  const visitPoints = 100;
+  const newPointsBalance = totalPoints + visitPoints;
+
+  const { error: transactionError } = await supabase
+    .from("points_transactions")
+    .insert({
+      user_id: currentUserId,
+      type: "visit",
+      amount: visitPoints,
+      source: "Подтверждённый визит",
+    });
+
+  if (transactionError) {
+    console.error("Ошибка записи визита:", transactionError);
+    alert("Не удалось сохранить начисление за визит");
+    return;
+  }
+
+  const { error: updateUserError } = await supabase
+    .from("users")
+    .update({
+      points_balance: newPointsBalance,
+    })
+    .eq("id", currentUserId);
+
+  if (updateUserError) {
+    console.error("Ошибка начисления баллов за визит:", updateUserError);
+    alert("Не удалось начислить баллы за визит");
+    return;
+  }
+
+  setBasePoints(newPointsBalance);
+  setVisitConfirmed(true);
+};
 
   const completeOnboarding = async () => {
   if (!currentUserId) return; 
