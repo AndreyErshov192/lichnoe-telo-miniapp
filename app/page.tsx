@@ -373,7 +373,6 @@ setCompletedMissions([...completedMissions, missionId]);
          totalPoints={totalPoints}
          currentLevel={currentLevel.name}
          telegramName={telegramName}
-         telegramId={telegramId}
 />
 
         {activeTab === "today" && (
@@ -666,14 +665,11 @@ function Header({
   totalPoints,
   currentLevel,
   telegramName,
-  telegramId,
 }: {
   totalPoints: number;
   currentLevel: string;
   telegramName: string;
-  telegramId: string;
 }) {
-  const isDemo = true;
   return (
     <header className="mb-6">
       <div className="flex items-center justify-between">
@@ -685,16 +681,8 @@ function Header({
         </div>
 {telegramName && (
   <p className="mt-2 text-sm text-neutral-400">
-    Telegram: {telegramName} · ID: {telegramId}
+    Привет, {telegramName}
   </p>
-)}
-        {isDemo && (
-  <div
-    className="rounded-full px-3 py-2 text-xs font-semibold text-white"
-    style={{ backgroundColor: brandRed }}
-  >
-    демо
-  </div>
 )}
       </div>
 
