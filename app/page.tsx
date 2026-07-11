@@ -267,6 +267,10 @@ async function loadCompletedMissions() {
 
   const nextLevel = levels.find((level) => level.min > totalPoints);
 
+  const pointsToNextLevel = nextLevel
+  ? Math.max(0, nextLevel.min - totalPoints)
+  : 0;
+
   const progressPercent = useMemo(() => {
     if (!nextLevel) return 100;
 
@@ -496,6 +500,8 @@ setCompletedMissions([...completedMissions, missionId]);
             progressPercent={progressPercent}
             completedMissionsCount={completedMissions.length}
             visitConfirmed={visitConfirmed}
+            streakCount={streakCount}
+            pointsToNextLevel={pointsToNextLevel}
           />
         )}
 
@@ -911,6 +917,8 @@ function ProgressScreen({
   progressPercent,
   completedMissionsCount,
   visitConfirmed,
+  streakCount,
+  pointsToNextLevel,
 }: {
   totalPoints: number;
   currentLevel: string;
@@ -918,6 +926,8 @@ function ProgressScreen({
   progressPercent: number;
   completedMissionsCount: number;
   visitConfirmed: boolean;
+  streakCount: number;
+  pointsToNextLevel: number;
 }) {
   return (
     <div>
@@ -937,13 +947,16 @@ function ProgressScreen({
 
         <p className="mt-2 text-sm text-neutral-400">
           {nextLevel
-            ? `До уровня “${nextLevel}” осталось немного.`
-            : "Вы открыли максимальный уровень демо-версии."}
+            ? `До уровня “${nextLevel}” осталось ${pointsToNextLevel} баллов.`
+            : "Вы открыли максимальный уровень."}
         </p>
       </section>
 
       <section className="mt-5 grid grid-cols-2 gap-3">
-        <StatCard label="Ритм" value="3 дня подряд" />
+        <StatCard
+           label="Ритм"
+           value={`${streakCount} ${streakCount === 1 ? "день" : "дней"} подряд`}
+/>
         <StatCard label="Миссии" value={`${completedMissionsCount}/3`} />
         <StatCard label="Визиты" value={visitConfirmed ? "1" : "0"} />
         <StatCard label="Привилегии" value="1 доступна" />
