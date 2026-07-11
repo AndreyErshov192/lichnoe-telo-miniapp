@@ -96,6 +96,7 @@ export default function Home() {
 
   const [telegramId, setTelegramId] = useState("");
   const [telegramName, setTelegramName] = useState("");
+  const [currentUserId, setCurrentUserId] = useState("");
 
   console.log("TELEGRAM USER:", telegramId, telegramName);
 
@@ -111,7 +112,6 @@ if (tg?.initDataUnsafe?.user) {
 }
   loadMissions();
   loadRewards();
-  loadCompletedMissions();
 }, []);
 
 useEffect(() => {
@@ -119,6 +119,12 @@ useEffect(() => {
 
   loadCurrentUser();
 }, [telegramId, telegramName]);
+
+  useEffect(() => {
+  if (!currentUserId) return;
+
+  loadCompletedMissions();
+}, [currentUserId]);
 
 async function loadMissions() {
   const { data, error } = await supabase
@@ -181,13 +187,15 @@ if (!data && telegramId) {
 }
 
   if (newUser) {
-    setBasePoints(0);
-  }
+  setCurrentUserId(newUser.id);
+  setBasePoints(0);
+}
 
   return;
 }
 
   if (data) {
+  setCurrentUserId(data.id);
   setGoal(data.goal ?? "");
   setReminderTime(data.reminder_time ?? "");
   setBasePoints(data.points_balance ?? 0);
@@ -202,7 +210,7 @@ async function loadCompletedMissions() {
   const { data, error } = await supabase
     .from("user_missions")
     .select("mission_id")
-    .eq("user_id", "096bc057-cd36-4458-bb70-be28c98f78ca")
+    .eq("user_id", currentUserId)
     .eq("status", "completed");
 
   if (error) {
@@ -246,7 +254,7 @@ async function loadCompletedMissions() {
   const { error } = await supabase
     .from("user_missions")
     .insert({
-      user_id: "096bc057-cd36-4458-bb70-be28c98f78ca",
+      user_id: currentUserId,
       mission_id: missionId,
       status: "completed",
       completed_at: new Date().toISOString(),
@@ -264,7 +272,7 @@ const pointsToAdd = mission?.points ?? 0;
 await supabase
   .from("points_transactions")
   .insert({
-    user_id: "096bc057-cd36-4458-bb70-be28c98f78ca",
+    user_id: currentUserId,
     type: "mission",
     amount: pointsToAdd,
     source: mission?.title ?? "Миссия",
@@ -276,7 +284,7 @@ const { data: updatedUser, error: updateUserError } = await supabase
   .update({
     points_balance: totalPoints + pointsToAdd,
   })
-  .eq("id", "096bc057-cd36-4458-bb70-be28c98f78ca")
+  .eq("id", currentUserId)
   .select();
 if (updateUserError) {
   console.error(updateUserError);
