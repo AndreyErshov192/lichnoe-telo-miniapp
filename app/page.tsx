@@ -130,7 +130,8 @@ async function loadMissions() {
   const { data, error } = await supabase
     .from("missions")
     .select("*")
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .limit(3);
 
   if (error) {
     console.error(error);
@@ -219,11 +220,14 @@ if (hasCompletedProfile) {
 }
 }
 async function loadCompletedMissions() {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
   const { data, error } = await supabase
     .from("user_missions")
     .select("mission_id")
     .eq("user_id", currentUserId)
-    .eq("status", "completed");
+    .eq("status", "completed")
+    .gte("completed_at", startOfDay.toISOString());
 
   if (error) {
     console.error(error);
@@ -262,6 +266,41 @@ async function loadCompletedMissions() {
 
   const completeMission = async (missionId: string) => {
   if (completedMissions.includes(missionId)) return;
+
+  if (!currentUserId) return;
+
+const startOfDay = new Date();
+startOfDay.setHours(0, 0, 0, 0);
+
+const { data: todayTransactions, error: todayError } = await supabase
+  .from("points_transactions")
+  .select("amount")
+  .eq("user_id", currentUserId)
+  .eq("type", "mission")
+  .gte("created_at", startOfDay.toISOString());
+
+if (todayError) {
+  console.error(todayError);
+  alert("Не удалось проверить дневной лимит");
+  return;
+}
+
+const todayMissionPoints =
+  todayTransactions?.reduce(
+    (sum, transaction) => sum + Number(transaction.amount ?? 0),
+    0
+  ) ?? 0;
+
+  const mission = missions.find((item) => item.id === missionId);
+  const missionPoints = mission?.points ?? 0;
+
+
+if (todayMissionPoints + missionPoints > 30) {
+  alert("Дневной лимит — 30 баллов за миссии");
+  return;
+}
+
+ const pointsToAdd = missionPoints;
 
   const { error } = await supabase
     .from("user_missions")
