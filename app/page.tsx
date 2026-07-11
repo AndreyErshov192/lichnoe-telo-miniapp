@@ -189,6 +189,8 @@ if (!data && telegramId) {
   if (newUser) {
   setCurrentUserId(newUser.id);
   setBasePoints(0);
+  setIsOnboardingComplete(false);
+  setOnboardingStep("intro");
 }
 
   return;
@@ -202,8 +204,18 @@ if (!data && telegramId) {
   setSelectedInterests(
     data.interests ? data.interests.split(",") : []
   );
-  setIsOnboardingComplete(true);
+  const hasCompletedProfile =
+  Boolean(data.goal) &&
+  Boolean(data.reminder_time) &&
+  Boolean(data.interests);
+
+setIsOnboardingComplete(hasCompletedProfile);
+
+if (hasCompletedProfile) {
   setActiveTab("today");
+} else {
+  setOnboardingStep("intro");
+}
 }
 }
 async function loadCompletedMissions() {
@@ -313,6 +325,7 @@ setCompletedMissions([...completedMissions, missionId]);
   };
 
   const completeOnboarding = async () => {
+  if (!currentUserId) return; 
   if (!goal || !reminderTime || selectedInterests.length === 0) return;
 
   const { data, error } = await supabase
@@ -322,7 +335,7 @@ setCompletedMissions([...completedMissions, missionId]);
   reminder_time: reminderTime,
   interests: selectedInterests.join(","),
 })
-.eq("telegram_id", "demo_user")
+.eq("id", currentUserId)
 .select()
 .single();
 
