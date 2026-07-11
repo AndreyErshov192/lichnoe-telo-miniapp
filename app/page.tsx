@@ -472,6 +472,7 @@ setCompletedMissions([...completedMissions, missionId]);
          totalPoints={totalPoints}
          currentLevel={currentLevel.name}
          telegramName={telegramName}
+         streakCount={streakCount}
 />
 
         {activeTab === "today" && (
@@ -764,10 +765,12 @@ function Header({
   totalPoints,
   currentLevel,
   telegramName,
+  streakCount,
 }: {
   totalPoints: number;
   currentLevel: string;
   telegramName: string;
+  streakCount: number;
 }) {
   return (
     <header className="mb-6">
@@ -786,6 +789,12 @@ function Header({
       </div>
 
       <div className="mt-5 flex items-center justify-between rounded-3xl border border-white/10 bg-white/[0.06] p-4">
+       
+       <div className="text-center">
+        <p className="text-xs text-neutral-400">Стрик</p>
+        <p className="text-lg font-semibold">🔥 {streakCount}</p>
+       </div>
+       
         <div>
           <p className="text-sm text-neutral-400">Ваш статус</p>
           <p className="text-xl font-semibold">{currentLevel}</p>
