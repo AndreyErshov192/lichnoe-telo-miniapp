@@ -97,6 +97,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("today");
   const [completedMissions, setCompletedMissions] = useState<string[]>([]);
   const [visitConfirmed, setVisitConfirmed] = useState(false);
+  const [visitsCount, setVisitsCount] = useState(0);
   const [missions, setMissions] = useState<Mission[]>(demoMissions);
 
   const [rewards, setRewards] = useState<any[]>([]); 
@@ -280,16 +281,15 @@ async function loadConfirmedVisit() {
     .select("id")
     .eq("user_id", currentUserId)
     .eq("status", "confirmed")
-    .eq("points_awarded", true)
-    .limit(1)
-    .maybeSingle();
+    .eq("points_awarded", true);
 
   if (error) {
-    console.error("Ошибка загрузки визита:", error);
+    console.error("Ошибка загрузки визитов:", error);
     return;
   }
 
-  setVisitConfirmed(Boolean(data));
+  setVisitConfirmed((data?.length ?? 0) > 0);
+  setVisitsCount(data?.length ?? 0);
 }
 
   const progressPercent = useMemo(() => {
@@ -576,6 +576,7 @@ if (visitError) {
             visitConfirmed={visitConfirmed}
             streakCount={streakCount}
             pointsToNextLevel={pointsToNextLevel}
+            visitsCount={visitsCount}
           />
         )}
 
@@ -993,6 +994,7 @@ function ProgressScreen({
   visitConfirmed,
   streakCount,
   pointsToNextLevel,
+  visitsCount,
 }: {
   totalPoints: number;
   currentLevel: string;
@@ -1002,6 +1004,7 @@ function ProgressScreen({
   visitConfirmed: boolean;
   streakCount: number;
   pointsToNextLevel: number;
+  visitsCount: number;
 }) {
   return (
     <div>
@@ -1032,7 +1035,7 @@ function ProgressScreen({
            value={`${streakCount} ${streakCount === 1 ? "день" : "дней"} подряд`}
 />
         <StatCard label="Миссии" value={`${completedMissionsCount}/3`} />
-        <StatCard label="Визиты" value={visitConfirmed ? "1" : "0"} />
+        <StatCard label="Визиты" value={String(visitsCount)} />
         <StatCard label="Привилегии" value="1 доступна" />
       </section>
     </div>
