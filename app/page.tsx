@@ -451,7 +451,7 @@ setCompletedMissions([...completedMissions, missionId]);
 
 if (visitError) {
   console.error("Ошибка создания визита:", visitError);
-  alert("Не удалось сохранить визит");
+  alert(`Не удалось сохранить визит: ${visitError.message}`);
   return;
 }
 
