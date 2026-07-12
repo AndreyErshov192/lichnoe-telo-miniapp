@@ -34,16 +34,31 @@ export default function AdminPage() {
   loadUsers();
 }, [isAdminAccessGranted]);
 
-function checkAdminAccess() {
-  const temporaryAdminPin = "2468";
-
-  if (adminPin !== temporaryAdminPin) {
-    setAdminAccessError("Неверный PIN-код");
-    return;
-  }
-
+async function checkAdminAccess() {
   setAdminAccessError("");
-  setIsAdminAccessGranted(true);
+
+  try {
+    const response = await fetch("/api/admin-login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        pin: adminPin,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      setAdminAccessError(data.error || "Ошибка входа");
+      return;
+    }
+
+    setIsAdminAccessGranted(true);
+  } catch {
+    setAdminAccessError("Не удалось проверить PIN-код");
+  }
 }
 
   async function loadUsers() {
