@@ -430,64 +430,6 @@ setCompletedMissions([...completedMissions, missionId]);
     });
   };
 
-  const confirmVisitDemo = async () => {
-  if (visitConfirmed || !currentUserId) return;
-
-  const visitPoints = 100;
-  const newPointsBalance = totalPoints + visitPoints;
-
-  const { data: newVisit, error: visitError } = await supabase
-  .from("visits")
-  .insert({
-    user_id: currentUserId,
-    visit_date: new Date().toISOString(),
-    status: "confirmed",
-    paid: true,
-    points_awarded: true,
-    service: "Демо-визит",
-  })
-  .select("id")
-  .single();
-
-if (visitError) {
-  console.error("Ошибка создания визита:", visitError);
-  alert(`Не удалось сохранить визит: ${visitError.message}`);
-  return;
-}
-
-  const { error: transactionError } = await supabase
-    .from("points_transactions")
-    .insert({
-      user_id: currentUserId,
-      type: "visit",
-      amount: visitPoints,
-      source: "Подтверждённый визит",
-      source_id: newVisit.id,
-    });
-
-  if (transactionError) {
-    console.error("Ошибка записи визита:", transactionError);
-    alert("Не удалось сохранить начисление за визит");
-    return;
-  }
-
-  const { error: updateUserError } = await supabase
-    .from("users")
-    .update({
-      points_balance: newPointsBalance,
-    })
-    .eq("id", currentUserId);
-
-  if (updateUserError) {
-    console.error("Ошибка начисления баллов за визит:", updateUserError);
-    alert("Не удалось начислить баллы за визит");
-    return;
-  }
-
-  setBasePoints(newPointsBalance);
-  setVisitConfirmed(true);
-};
-
   const completeOnboarding = async () => {
   if (!currentUserId) return; 
   if (!goal || !reminderTime || selectedInterests.length === 0) return;
@@ -589,9 +531,8 @@ if (visitError) {
 
         {activeTab === "club" && (
           <ClubScreen
-            visitConfirmed={visitConfirmed}
-            onConfirmVisit={confirmVisitDemo}
-          />
+  visitConfirmed={visitConfirmed}
+/>
         )}
 
         {activeTab === "profile" && (
@@ -1107,10 +1048,8 @@ function RewardsScreen({
 
 function ClubScreen({
   visitConfirmed,
-  onConfirmVisit,
 }: {
   visitConfirmed: boolean;
-  onConfirmVisit: () => void;
 }) {
   return (
     <div className="grid gap-4">
@@ -1187,22 +1126,6 @@ function ClubScreen({
           </div>
         </div>
 
-        <button
-          onClick={onConfirmVisit}
-          disabled={visitConfirmed}
-          className={
-            visitConfirmed
-              ? "mt-5 w-full rounded-2xl bg-white/10 px-5 py-4 font-semibold text-neutral-500"
-              : "mt-5 w-full rounded-2xl px-5 py-4 font-semibold text-white"
-          }
-          style={!visitConfirmed ? { backgroundColor: brandRed } : undefined}
-        >
-          {visitConfirmed ? "Баллы начислены" : "Демо: подтвердить визит"}
-        </button>
-
-        <p className="mt-3 text-xs leading-5 text-neutral-500">
-          Кнопка используется только в демо. В рабочей версии подтверждение посещения приходит автоматически после синхронизации с 1с.
-        </p>
       </section>
     </div>
   );
