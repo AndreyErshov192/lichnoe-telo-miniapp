@@ -135,6 +135,7 @@ useEffect(() => {
   if (!currentUserId) return;
 
   loadCompletedMissions();
+  loadConfirmedVisit();
 }, [currentUserId]);
 
 async function loadMissions() {
@@ -270,6 +271,26 @@ async function loadCompletedMissions() {
   const pointsToNextLevel = nextLevel
   ? Math.max(0, nextLevel.min - totalPoints)
   : 0;
+
+async function loadConfirmedVisit() {
+  if (!currentUserId) return;
+
+  const { data, error } = await supabase
+    .from("visits")
+    .select("id")
+    .eq("user_id", currentUserId)
+    .eq("status", "confirmed")
+    .eq("points_awarded", true)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Ошибка загрузки визита:", error);
+    return;
+  }
+
+  setVisitConfirmed(Boolean(data));
+}
 
   const progressPercent = useMemo(() => {
     if (!nextLevel) return 100;
@@ -415,6 +436,25 @@ setCompletedMissions([...completedMissions, missionId]);
   const visitPoints = 100;
   const newPointsBalance = totalPoints + visitPoints;
 
+  const { data: newVisit, error: visitError } = await supabase
+  .from("visits")
+  .insert({
+    user_id: currentUserId,
+    visit_date: new Date().toISOString(),
+    status: "confirmed",
+    paid: true,
+    points_awarded: true,
+    service: "Демо-визит",
+  })
+  .select("id")
+  .single();
+
+if (visitError) {
+  console.error("Ошибка создания визита:", visitError);
+  alert("Не удалось сохранить визит");
+  return;
+}
+
   const { error: transactionError } = await supabase
     .from("points_transactions")
     .insert({
@@ -422,6 +462,7 @@ setCompletedMissions([...completedMissions, missionId]);
       type: "visit",
       amount: visitPoints,
       source: "Подтверждённый визит",
+      source_id: newVisit.id,
     });
 
   if (transactionError) {
